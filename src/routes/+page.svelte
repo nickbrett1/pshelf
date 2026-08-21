@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from "svelte";
   import { assets } from "$app/paths";
   import GameCover from "$lib/GameCover.svelte";
   import { filterGames, keepIfCancelPsPlus } from "$lib/catalog.js";
@@ -74,7 +73,6 @@
   // Searching/filtering bypasses the cap and shows every match.
   const PAGE = 60;
   let visibleCount = $state(PAGE);
-  let sentinel = $state();
 
   const hasActiveFilter = $derived(
     debouncedQuery.trim() !== "" ||
@@ -87,7 +85,9 @@
     hasActiveFilter ? sorted : sorted.slice(0, visibleCount),
   );
 
-  onMount(() => {
+  // Action on the sentinel: observe it directly so there's no bind:this +
+  // onMount timing race (which left the observer unset and stalled the load).
+  function loadMore(node) {
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
@@ -96,9 +96,9 @@
       },
       { rootMargin: "800px" },
     );
-    if (sentinel) io.observe(sentinel);
-    return () => io.disconnect();
-  });
+    io.observe(node);
+    return { destroy: () => io.disconnect() };
+  }
 
   // Highlight matched substrings in title/genre/platform/retailer.
   function highlight(text) {
@@ -243,7 +243,7 @@
     </section>
 
     {#if !hasActiveFilter && visible.length < sorted.length}
-      <div class="load-more" bind:this={sentinel}>…</div>
+      <div class="load-more" use:loadMore>…</div>
     {/if}
   {/if}
 </main>
