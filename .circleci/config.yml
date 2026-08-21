@@ -34,15 +34,16 @@ jobs:
           command: npx vitest --coverage
 
   docker-publish:
-    machine:
-      image: ubuntu-2204:2024.01.1
-    resource_class: medium
+    docker:
+      - image: cimg/base:stable
     environment:
       # BuildKit layer cache ref (ghcr.io registry cache, mode=max). Cache-only
       # tag — never used as a deployable image.
       CACHE_REF: ghcr.io/nickbrett1/pshelf:buildcache
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Login to Container Registry
           command: |
