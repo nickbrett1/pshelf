@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   import { assets } from "$app/paths";
   import GameCover from "$lib/GameCover.svelte";
   import { filterGames, keepIfCancelPsPlus } from "$lib/catalog.js";
@@ -65,6 +66,39 @@
   });
 
   const split = $derived(keepIfCancelPsPlus(data.games));
+
+  // Progressive rendering: render the first PAGE games server-side, then reveal
+  // more as the user scrolls (IntersectionObserver sentinel). This keeps the
+  // initial SSR HTML and DOM small — the covers themselves are already
+  // lazy-loaded, so the big cost was 1,000+ cards in the initial payload.
+  // Searching/filtering bypasses the cap and shows every match.
+  const PAGE = 60;
+  let visibleCount = $state(PAGE);
+  let sentinel = $state();
+
+  const hasActiveFilter = $derived(
+    debouncedQuery.trim() !== "" ||
+      platformFilter !== "all" ||
+      formatFilter !== "all" ||
+      classFilter !== "all",
+  );
+
+  const visible = $derived(
+    hasActiveFilter ? sorted : sorted.slice(0, visibleCount),
+  );
+
+  onMount(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          visibleCount += PAGE;
+        }
+      },
+      { rootMargin: "800px" },
+    );
+    if (sentinel) io.observe(sentinel);
+    return () => io.disconnect();
+  });
 
   // Highlight matched substrings in title/genre/platform/retailer.
   function highlight(text) {
@@ -184,7 +218,7 @@
     </section>
 
     <section class="grid">
-      {#each sorted as game (game.key)}
+      {#each visible as game (game.key)}
         <article class="card">
           <GameCover {game} />
           <div class="card-body">
@@ -207,6 +241,10 @@
         </article>
       {/each}
     </section>
+
+    {#if !hasActiveFilter && visible.length < sorted.length}
+      <div class="load-more" bind:this={sentinel}>…</div>
+    {/if}
   {/if}
 </main>
 
@@ -356,6 +394,11 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 18px;
+  }
+  .load-more {
+    text-align: center;
+    padding: 24px 0;
+    color: #4a5268;
   }
   .card {
     background: #161a24;
