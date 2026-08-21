@@ -35,51 +35,6 @@ function resolveDbPath() {
 }
 
 /**
- * Normalize an IGDB cover URL to an absolute `https://` URL so it loads in the
- * browser regardless of the scheme the site is served over. IGDB stores covers
- * protocol-relative (`//images.igdb.com/...`), which would otherwise resolve to
- * plain `http://` on a Tailscale-only http host and fail to load.
- * @param {string|null|undefined} url
- * @returns {string|null}
- */
-export function normalizeCover(url) {
-  if (!url || typeof url !== "string") return null;
-  const trimmed = url.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith("//")) return `https:${trimmed}`;
-  if (trimmed.startsWith("http://")) return `https://${trimmed.slice(7)}`;
-  return trimmed;
-}
-
-/**
- * Rewrite a cover URL to a same-origin proxy path served by pshelf
- * (`/img/igdb/image/upload/...`). Browsers (e.g. iOS Safari) sometimes cannot
- * load images.igdb.com directly, and the proxy keeps every request on the same
- * origin the site is already reachable from. Non-IGDB covers fall back to the
- * absolute https URL.
- * @param {string|null|undefined} url
- * @returns {string|null}
- */
-// IGDB serves covers in preset sizes (e.g. t_thumb, t_cover_big, t_cover_big_2x).
-// The catalog stores t_thumb (~90px), which is far too small for our
-// ~180-250px cards and looks blurry once upscaled. Request the 2x cover
-// variant (528x748) so covers stay crisp on HiDPI/retina displays.
-const IGDB_COVER_SIZE = "t_cover_big_2x";
-
-export function coverPath(url) {
-  const normalized = normalizeCover(url);
-  if (!normalized) return null;
-  const m = normalized.match(/^https:\/\/images\.igdb\.com\/(.+)$/);
-  if (!m) return normalized;
-  // Swap whatever size IGDB stored (t_thumb, t_cover_big, ...) for the
-  // high-resolution cover variant before proxying.
-  const highres = m[1].replace(
-    /^igdb\/image\/upload\/[^/]+\//,
-    `igdb/image/upload/${IGDB_COVER_SIZE}/`,
-  );
-  return `/img/${highres}`;
-}
-
 /**
  * Map a raw catalog_views row (unknown DB schema) onto the Pshelf UI contract.
  * Tolerant of missing columns so it degrades gracefully across schema changes.
@@ -94,10 +49,11 @@ export function mapRow(row) {
     format: row.format ?? row.media_type ?? "unknown",
     ownership_class: row.ownership_class ?? "unknown",
     retailer: row.retailer ?? null,
-    // Prefer mailroom's locally-cached cover (cover_local = '/covers/<id>.jpg',
-    // served as a static file from the shared /data mount). Fall back to the
-    // live IGDB proxy path for games that aren't cached yet.
-    cover: row.cover_local ?? coverPath(row.cover_url ?? row.cover),
+    // Covers are cached by mailroom at sync time and served as static files
+    // from the shared /data mount (cover_local = '/covers/<id>.jpg',
+    // memos/covers-caching-design). Games without a cached cover get the
+    // placeholder. No live IGDB dependency.
+    cover: row.cover_local ?? null,
     rating: row.rating ?? null,
     year: row.year ?? row.release_year ?? null,
     genres: parseList(row.genres ?? row.genre ?? ""),
