@@ -184,7 +184,7 @@
     </section>
 
     <section class="grid">
-      {#each sorted as game (game.id ?? game.title)}
+      {#each sorted as game (game.key)}
         <article class="card">
           <GameCover {game} />
           <div class="card-body">

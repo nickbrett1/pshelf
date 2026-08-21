@@ -113,7 +113,12 @@ export function loadCatalog() {
     const db = new DatabaseSync(dbPath, { readOnly: true });
     const rows = db.prepare("SELECT * FROM catalog_views").all();
     db.close();
-    return rows.map(mapRow);
+    const games = rows.map(mapRow);
+    // Svelte 5's keyed {#each} throws on duplicate keys (each_key_duplicate).
+    // Many rows have no usable id and titles repeat, so the natural key
+    // (game.id ?? game.title) collides and breaks hydration of the grid.
+    // Give every row a unique, stable key computed once at load time.
+    return games.map((g, i) => ({ ...g, key: `${g.id ?? g.title}__${i}` }));
   } catch (err) {
     console.error(
       `[pshelf] failed to read catalog from ${dbPath}:`,

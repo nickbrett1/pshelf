@@ -1,38 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Bubble Bobble themed favicon: Bub the dragon inside a blue bubble -->
-  <!-- tile background -->
-  <rect width="100" height="100" rx="22" fill="#0c1f36"/>
+  <!-- PlayStation 4-button icon on dark theme tile -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="90%">
+      <stop offset="0%" stop-color="#182a44"/>
+      <stop offset="100%" stop-color="#0b1422"/>
+    </radialGradient>
+  </defs>
 
-  <!-- bubble body -->
-  <circle cx="50" cy="50" r="40" fill="#38a3e5" opacity="0.35"/>
-  <circle cx="50" cy="50" r="40" fill="none" stroke="#90d5ff" stroke-width="3"/>
-  <circle cx="50" cy="50" r="37" fill="none" stroke="#e0f4ff" stroke-width="1" opacity="0.6"/>
-  <!-- bubble gleam -->
-  <ellipse cx="36" cy="27" rx="10" ry="5" fill="#ffffff" opacity="0.75" transform="rotate(-30 36 27)"/>
-  <circle cx="64" cy="72" r="3" fill="#ffffff" opacity="0.45"/>
+  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
+  <rect x="7" y="7" width="86" height="86" rx="18" fill="none" stroke="#2a4060" stroke-width="2" opacity="0.6"/>
 
-  <!-- Bub the dragon -->
-  <g>
-    <!-- horns -->
-    <path d="M29 36 L22 21 L39 31 Z" fill="#f8c846"/>
-    <path d="M71 36 L78 21 L61 31 Z" fill="#f8c846"/>
-    <!-- head -->
-    <ellipse cx="50" cy="56" rx="25" ry="21" fill="#44b443"/>
-    <ellipse cx="50" cy="62" rx="24" ry="16" fill="#389a37"/>
-    <!-- snout -->
-    <ellipse cx="50" cy="69" rx="14" ry="9" fill="#fed874"/>
-    <!-- eyes -->
-    <circle cx="38" cy="50" r="9.5" fill="#ffffff"/>
-    <circle cx="62" cy="50" r="9.5" fill="#ffffff"/>
-    <circle cx="39.5" cy="50" r="5" fill="#181818"/>
-    <circle cx="60.5" cy="50" r="5" fill="#181818"/>
-    <!-- eye gleams -->
-    <circle cx="41.5" cy="47.5" r="2" fill="#ffffff"/>
-    <circle cx="62.5" cy="47.5" r="2" fill="#ffffff"/>
-    <!-- nostrils -->
-    <circle cx="45" cy="65" r="1.6" fill="#246023"/>
-    <circle cx="55" cy="65" r="1.6" fill="#246023"/>
-    <!-- smile -->
-    <path d="M44 71 Q50 75 56 71" stroke="#246023" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-  </g>
+  <!-- Triangle (green, top-left) -->
+  <path d="M32 20 L18 46 L46 46 Z" fill="#00e676"/>
+
+  <!-- Circle (red, top-right) -->
+  <circle cx="68" cy="33" r="13" fill="#ff1744"/>
+
+  <!-- Cross (blue, bottom-left) - pure polygons, no transforms -->
+  <polygon points="21,59 25,55 43,73 39,77" fill="#00e5ff"/>
+  <polygon points="39,55 43,59 25,77 21,73" fill="#00e5ff"/>
+
+  <!-- Square (pink, bottom-right) -->
+  <rect x="55" y="54" width="26" height="26" rx="6" fill="#f50057"/>
 </svg>
