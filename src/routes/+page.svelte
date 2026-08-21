@@ -1,4 +1,5 @@
 <script>
+  import GameCover from "$lib/GameCover.svelte";
   import { filterGames, keepIfCancelPsPlus } from "$lib/catalog.js";
 
   let { data } = $props();
@@ -184,30 +185,7 @@
     <section class="grid">
       {#each sorted as game (game.id ?? game.title)}
         <article class="card">
-          <div class="cover">
-            {#if game.cover}
-              <img
-                src={game.cover}
-                alt=""
-                width="210"
-                height="280"
-                decoding="async"
-                onerror={(e) => {
-                  e.currentTarget.style.display = "none";
-                  const ph =
-                    e.currentTarget.parentElement?.querySelector(
-                      ".cover-placeholder",
-                    );
-                  if (ph) ph.style.display = "flex";
-                }}
-              />
-              <div class="cover-placeholder" style="display:none">
-                {game.title.charAt(0)}
-              </div>
-            {:else}
-              <div class="cover-placeholder">{game.title.charAt(0)}</div>
-            {/if}
-          </div>
+          <GameCover {game} />
           <div class="card-body">
             <h3 class="title">{@html highlight(game.title)}</h3>
             <div class="meta">
@@ -385,25 +363,6 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-  }
-  .cover {
-    aspect-ratio: 3 / 4;
-    background: #1f2330;
-    overflow: hidden;
-  }
-  .cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .cover-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-    color: #3a4256;
   }
   .card-body {
     padding: 12px;
