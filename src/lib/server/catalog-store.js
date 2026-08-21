@@ -35,6 +35,23 @@ function resolveDbPath() {
 }
 
 /**
+ * Normalize an IGDB cover URL to an absolute `https://` URL so it loads in the
+ * browser regardless of the scheme the site is served over. IGDB stores covers
+ * protocol-relative (`//images.igdb.com/...`), which would otherwise resolve to
+ * plain `http://` on a Tailscale-only http host and fail to load.
+ * @param {string|null|undefined} url
+ * @returns {string|null}
+ */
+export function normalizeCover(url) {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  if (trimmed.startsWith("http://")) return `https://${trimmed.slice(7)}`;
+  return trimmed;
+}
+
+/**
  * Map a raw catalog_views row (unknown DB schema) onto the Pshelf UI contract.
  * Tolerant of missing columns so it degrades gracefully across schema changes.
  * @param {Record<string, any>} row
@@ -48,7 +65,7 @@ export function mapRow(row) {
     format: row.format ?? row.media_type ?? "unknown",
     ownership_class: row.ownership_class ?? "unknown",
     retailer: row.retailer ?? null,
-    cover: row.cover_url ?? row.cover ?? null,
+    cover: normalizeCover(row.cover_url ?? row.cover),
     rating: row.rating ?? null,
     year: row.year ?? row.release_year ?? null,
     genres: parseList(row.genres ?? row.genre ?? ""),

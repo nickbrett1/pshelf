@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { loadCatalog, mapRow } from "../src/lib/server/catalog-store.js";
+import {
+  loadCatalog,
+  mapRow,
+  normalizeCover,
+} from "../src/lib/server/catalog-store.js";
 
 const ORIGINAL_PATH = process.env.CATALOG_DB_PATH;
 
@@ -67,6 +71,27 @@ describe("loadCatalog", () => {
   });
 });
 
+describe("normalizeCover", () => {
+  it("upgrades protocol-relative and http URLs to https", () => {
+    expect(normalizeCover("//images.igdb.com/igdb/x.jpg")).toBe(
+      "https://images.igdb.com/igdb/x.jpg",
+    );
+    expect(normalizeCover("http://images.igdb.com/x.jpg")).toBe(
+      "https://images.igdb.com/x.jpg",
+    );
+    expect(normalizeCover("https://images.igdb.com/x.jpg")).toBe(
+      "https://images.igdb.com/x.jpg",
+    );
+  });
+
+  it("returns null for empty/invalid covers", () => {
+    expect(normalizeCover("")).toBeNull();
+    expect(normalizeCover(null)).toBeNull();
+    expect(normalizeCover(undefined)).toBeNull();
+    expect(normalizeCover(123)).toBeNull();
+  });
+});
+
 describe("mapRow", () => {
   it("maps a full row to the UI contract", () => {
     const row = {
@@ -76,7 +101,7 @@ describe("mapRow", () => {
       format: "physical",
       ownership_class: "purchased",
       retailer: "GameStop",
-      cover_url: "http://img/h.jpg",
+      cover_url: "//img/h.jpg",
       rating: 89,
       year: 2017,
       genres: "Action RPG",
@@ -88,7 +113,7 @@ describe("mapRow", () => {
       format: "physical",
       ownership_class: "purchased",
       retailer: "GameStop",
-      cover: "http://img/h.jpg",
+      cover: "https://img/h.jpg",
       rating: 89,
       year: 2017,
       genres: ["Action RPG"],
