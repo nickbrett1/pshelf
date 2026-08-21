@@ -12,10 +12,13 @@
   let coverReady = $state(false);
 
   function reveal(img) {
+    // Already loaded successfully (e.g. during SSR) -> reveal immediately.
     if (img.complete && img.naturalWidth > 0) {
       coverReady = true;
-      return;
     }
+    // Always listen for load/error too. A freshly-hydrated <img> can report
+    // `complete === true` with `naturalWidth === 0` before its src loads, so
+    // we can't rely on the initial state alone — attach listeners in all cases.
     img.addEventListener(
       "load",
       () => {
