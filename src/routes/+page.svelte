@@ -118,6 +118,9 @@
           <span class="stat-label">On PS+</span>
         </div>
       </div>
+      <nav>
+        <a href="/fix">Fix IGDB matches →</a>
+      </nav>
     </div>
   </header>
 
@@ -281,6 +284,15 @@
   .stat-label {
     color: #b7c0d0;
     font-size: 0.85rem;
+  }
+  nav a {
+    color: #e94560;
+    text-decoration: none;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  nav a:hover {
+    text-decoration: underline;
   }
 
   .empty {
