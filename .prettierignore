@@ -1,0 +1,15 @@
+# Build output
+build
+dist
+.svelte-kit
+coverage
+reports
+package
+
+# Dependencies
+node_modules
+
+# Env
+.env
+.env.*
+!.env.example

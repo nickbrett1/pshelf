@@ -8,6 +8,8 @@ pnpm-debug.log*
 # SvelteKit
 .svelte-kit
 build
+coverage
+reports
 .env
 .env.*
 !.env.example
