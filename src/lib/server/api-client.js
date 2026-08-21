@@ -125,6 +125,56 @@ export async function excludeNonGame(ownedGameId, note = null) {
   }
 }
 
+/** @returns {Promise<{status: string, last_success: string|null, last_error: string|null, expires_at: string|null}>} */
+export async function getPsnCredential() {
+  const fallback = {
+    status: "needs_refresh",
+    last_success: null,
+    last_error: null,
+    expires_at: null,
+  };
+  try {
+    const res = await fetch(`${MANUAL_API}/manual/psn-credential`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return { ...fallback, last_error: `manual API ${res.status}` };
+    return { ...fallback, ...(await res.json()) };
+  } catch (err) {
+    return { ...fallback, last_error: err.message };
+  }
+}
+
+/**
+ * Submit a fresh NPSSO to refresh the PSN credential.
+ * @param {string} npsso
+ * @returns {Promise<{ok: boolean, error?: string, status?: string}>}
+ */
+export async function submitPsnCredential(npsso) {
+  try {
+    const res = await fetch(`${MANUAL_API}/manual/psn-credential`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ npsso }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      let detail = text.slice(0, 300);
+      try {
+        const j = JSON.parse(text);
+        detail = j.detail ?? detail;
+      } catch {
+        // not JSON
+      }
+      return { ok: false, error: detail };
+    }
+    const data = await res.json();
+    return { ok: true, status: data?.status };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
 export async function applyIgdbMatch(ownedGameId, igdbId, note = null) {
   try {
     const body = { owned_game_id: ownedGameId, igdb_id: igdbId };

@@ -119,7 +119,8 @@
         </div>
       </div>
       <nav>
-        <a href="/fix">Fix IGDB matches →</a>
+        <a href="/fix">Fix IGDB</a>
+        <a href="/psn">PSN</a>
       </nav>
     </div>
   </header>
@@ -284,6 +285,11 @@
   .stat-label {
     color: #b7c0d0;
     font-size: 0.85rem;
+  }
+  nav {
+    display: flex;
+    gap: 14px;
+    align-items: center;
   }
   nav a {
     color: #e94560;

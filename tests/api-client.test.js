@@ -6,6 +6,8 @@ import {
   igdbSearch,
   applyIgdbMatch,
   excludeNonGame,
+  getPsnCredential,
+  submitPsnCredential,
 } from "../src/lib/server/api-client.js";
 
 afterEach(() => {
@@ -135,6 +137,67 @@ describe("applyIgdbMatch", () => {
     const res = await applyIgdbMatch(1, 2);
     expect(res.ok).toBe(false);
     expect(res.error).toContain("boom");
+  });
+});
+
+describe("getPsnCredential", () => {
+  it("parses a valid status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: "valid",
+          last_success: "2026-01-01",
+          expires_at: null,
+        }),
+      }),
+    );
+    expect(await getPsnCredential()).toMatchObject({
+      status: "valid",
+      last_success: "2026-01-01",
+    });
+  });
+
+  it("falls back to needs_refresh on failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 500 }),
+    );
+    const out = await getPsnCredential();
+    expect(out.status).toBe("needs_refresh");
+    expect(out.last_error).toContain("500");
+  });
+});
+
+describe("submitPsnCredential", () => {
+  it("posts npsso and returns ok on success", async () => {
+    const fn = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "valid", cookies_stored: true }),
+    });
+    vi.stubGlobal("fetch", fn);
+    expect(await submitPsnCredential("np_abc")).toEqual({
+      ok: true,
+      status: "valid",
+    });
+    const [, opts] = fn.mock.calls[0];
+    expect(opts.body).toContain("np_abc");
+  });
+
+  it("surfaces the API detail on a 400", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () =>
+          JSON.stringify({ detail: "NPSSO exchange failed: bad" }),
+      }),
+    );
+    const res = await submitPsnCredential("bad");
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain("NPSSO exchange failed");
   });
 });
 
