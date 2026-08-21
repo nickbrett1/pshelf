@@ -1,4 +1,5 @@
 <script>
+  import { assets } from "$app/paths";
   import GameCover from "$lib/GameCover.svelte";
   import { filterGames, keepIfCancelPsPlus } from "$lib/catalog.js";
 
@@ -101,7 +102,7 @@
   <header class="hero">
     <div class="hero-inner">
       <div class="brand">
-        <img src="%sveltekit.assets%/favicon.svg" alt="Pshelf" class="logo" />
+        <img src="{assets}/favicon.svg" alt="Pshelf" class="logo" />
         <h1>Pshelf</h1>
         <p class="tagline">Your PlayStation catalog</p>
       </div>
