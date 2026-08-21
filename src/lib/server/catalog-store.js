@@ -52,6 +52,22 @@ export function normalizeCover(url) {
 }
 
 /**
+ * Rewrite a cover URL to a same-origin proxy path served by pshelf
+ * (`/img/igdb/image/upload/...`). Browsers (e.g. iOS Safari) sometimes cannot
+ * load images.igdb.com directly, and the proxy keeps every request on the same
+ * origin the site is already reachable from. Non-IGDB covers fall back to the
+ * absolute https URL.
+ * @param {string|null|undefined} url
+ * @returns {string|null}
+ */
+export function coverPath(url) {
+  const normalized = normalizeCover(url);
+  if (!normalized) return null;
+  const m = normalized.match(/^https:\/\/images\.igdb\.com\/(.+)$/);
+  return m ? `/img/${m[1]}` : normalized;
+}
+
+/**
  * Map a raw catalog_views row (unknown DB schema) onto the Pshelf UI contract.
  * Tolerant of missing columns so it degrades gracefully across schema changes.
  * @param {Record<string, any>} row
@@ -65,7 +81,7 @@ export function mapRow(row) {
     format: row.format ?? row.media_type ?? "unknown",
     ownership_class: row.ownership_class ?? "unknown",
     retailer: row.retailer ?? null,
-    cover: normalizeCover(row.cover_url ?? row.cover),
+    cover: coverPath(row.cover_url ?? row.cover),
     rating: row.rating ?? null,
     year: row.year ?? row.release_year ?? null,
     genres: parseList(row.genres ?? row.genre ?? ""),

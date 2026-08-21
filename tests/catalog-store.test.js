@@ -7,6 +7,7 @@ import {
   loadCatalog,
   mapRow,
   normalizeCover,
+  coverPath,
 } from "../src/lib/server/catalog-store.js";
 
 const ORIGINAL_PATH = process.env.CATALOG_DB_PATH;
@@ -89,6 +90,25 @@ describe("normalizeCover", () => {
     expect(normalizeCover(null)).toBeNull();
     expect(normalizeCover(undefined)).toBeNull();
     expect(normalizeCover(123)).toBeNull();
+  });
+});
+
+describe("coverPath", () => {
+  it("rewrites IGDB covers to same-origin proxy paths", () => {
+    expect(
+      coverPath("https://images.igdb.com/igdb/image/upload/t_thumb/co1.jpg"),
+    ).toBe("/img/igdb/image/upload/t_thumb/co1.jpg");
+    expect(
+      coverPath("//images.igdb.com/igdb/image/upload/t_thumb/co2.jpg"),
+    ).toBe("/img/igdb/image/upload/t_thumb/co2.jpg");
+  });
+
+  it("leaves non-IGDB covers as absolute URLs and nulls empties", () => {
+    expect(coverPath("http://cdn.example.com/x.jpg")).toBe(
+      "https://cdn.example.com/x.jpg",
+    );
+    expect(coverPath("")).toBeNull();
+    expect(coverPath(null)).toBeNull();
   });
 });
 
