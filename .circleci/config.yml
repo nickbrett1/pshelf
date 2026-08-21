@@ -34,7 +34,7 @@ jobs:
 
   docker-publish:
     docker:
-      - image: cimg/base:stable
+      - image: cimg/base:current
     environment:
       # BuildKit layer cache ref (ghcr.io registry cache, mode=max). Cache-only
       # tag — never used as a deployable image.
