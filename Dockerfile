@@ -6,14 +6,14 @@
 # builds the application. Stage 2 (runtime): copies only the build output /
 # virtualenv and production dependencies, keeping the final image small.
 
-FROM node:22-slim AS build
+FROM node:24-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json* .npmrc* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
 
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /app
 
 ENV NODE_ENV=production

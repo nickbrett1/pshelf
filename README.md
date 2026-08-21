@@ -1,6 +1,25 @@
-# pshelf
+# Pshelf
 
-A pshelf project generated with genproj
+A small web frontend for viewing the **PlayStation catalog** — owned games,
+IGDB metadata, and PSN credential status. Pshelf is a read-mostly _consumer_
+of the [mailroom](https://github.com/nickbrett1/mailroom) store: it reads
+`catalog_views` from a read-only `/data` mount and pushes any edits through
+mailroom's manual-edit API (single-writer rule).
+
+## Features
+
+- **Catalog grid** — owned games with title, platform, format, ownership
+  class, retailer, cover art, genres and IGDB rating.
+- **Instant search** — client-side, debounced free-text filter over the
+  in-memory catalog (title, genre, platform, retailer) with highlighted matches.
+- **Filter & sort** — by platform, format, ownership class; sort by title,
+  platform or rating.
+- **"Keep if I cancel PS+"** split — at-a-glance count of titles that survive
+  dropping the PS+ subscription.
+
+Data source: SQLite `catalog_views` on `/volume1/docker/mailroom/data`, mounted
+read-only at `/data` (configurable via `CATALOG_DB_PATH`). No DB writes from
+this site — all writes go through mailroom's manual API.
 
 ## Capabilities
 

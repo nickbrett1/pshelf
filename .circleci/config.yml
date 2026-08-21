@@ -3,7 +3,9 @@ orbs:
   node: circleci/node@5.0.2
 jobs:
   build:
-    executor: node/default
+    executor:
+      name: node/default
+      tag: "24"
     steps:
       - checkout
       - restore_cache:
