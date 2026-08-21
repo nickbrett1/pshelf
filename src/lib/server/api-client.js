@@ -1,13 +1,14 @@
 // Thin, read-mostly client for mailroom's manual API (:3004) and the IGDB MCP
-// (:8765). All calls go server-side (pshelf proxies them) so API details stay
-// out of the browser and we avoid CORS. Endpoints and payload shapes come from
-// the mailroom contract (see the catalog-site memo / mailroom repo).
+// (igdb-mcp:8765). All calls go server-side (pshelf proxies them) so API
+// details stay out of the browser and we avoid CORS. Endpoints and payload
+// shapes come from the mailroom contract (see the catalog-site memo / mailroom
+// repo). The IGDB search route is POST <IGDB_API_URL>/igdb/search.
 
 const MANUAL_API = (process.env.MANUAL_API_URL || "http://nas:3004").replace(
   /\/$/,
   "",
 );
-const IGDB_API = (process.env.IGDB_API_URL || "http://nas:8765").replace(
+const IGDB_API = (process.env.IGDB_API_URL || "http://igdb-mcp:8765").replace(
   /\/$/,
   "",
 );
