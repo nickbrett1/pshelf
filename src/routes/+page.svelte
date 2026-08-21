@@ -1,7 +1,11 @@
 <script>
   import { assets } from "$app/paths";
   import GameCover from "$lib/GameCover.svelte";
-  import { filterGames, keepIfCancelPsPlus } from "$lib/catalog.js";
+  import {
+    filterGames,
+    keepIfCancelPsPlus,
+    normalizePlatform,
+  } from "$lib/catalog.js";
 
   let { data } = $props();
 
@@ -22,7 +26,11 @@
   }
 
   const platforms = $derived(
-    [...new Set(data.games.map((g) => g.platform).filter(Boolean))].sort(),
+    [
+      ...new Set(
+        data.games.map((g) => normalizePlatform(g.platform)).filter(Boolean),
+      ),
+    ].sort(),
   );
   const formats = $derived(
     [...new Set(data.games.map((g) => g.format).filter(Boolean))].sort(),
@@ -36,7 +44,9 @@
   const filtered = $derived.by(() => {
     let games = filterGames(data.games, debouncedQuery);
     if (platformFilter !== "all")
-      games = games.filter((g) => g.platform === platformFilter);
+      games = games.filter(
+        (g) => normalizePlatform(g.platform) === platformFilter,
+      );
     if (formatFilter !== "all")
       games = games.filter((g) => g.format === formatFilter);
     if (classFilter !== "all")
@@ -52,8 +62,9 @@
           return a.title.localeCompare(b.title);
         case "platform":
           return (
-            a.platform.localeCompare(b.platform) ||
-            a.title.localeCompare(b.title)
+            normalizePlatform(a.platform).localeCompare(
+              normalizePlatform(b.platform),
+            ) || a.title.localeCompare(b.title)
           );
         case "rating":
           return (b.rating ?? 0) - (a.rating ?? 0);
@@ -224,7 +235,7 @@
           <div class="card-body">
             <h3 class="title">{@html highlight(game.title)}</h3>
             <div class="meta">
-              <span class="platform">{game.platform}</span>
+              <span class="platform">{normalizePlatform(game.platform)}</span>
               <span class="format">{game.format}</span>
               <span class="class">{formatClass(game.ownership_class)}</span>
             </div>

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { filterGames, keepIfCancelPsPlus } from "../src/lib/catalog.js";
+import {
+  filterGames,
+  keepIfCancelPsPlus,
+  normalizePlatform,
+} from "../src/lib/catalog.js";
 
 const games = [
   {
@@ -61,5 +65,31 @@ describe("keepIfCancelPsPlus", () => {
       "Bloodborne",
       "Horizon Zero Dawn",
     ]);
+  });
+});
+
+describe("normalizePlatform", () => {
+  it("merges the common spellings of each console", () => {
+    expect(normalizePlatform("ps4")).toBe("PS4");
+    expect(normalizePlatform("playstation 4")).toBe("PS4");
+    expect(normalizePlatform("PS4")).toBe("PS4");
+    expect(normalizePlatform("playstation4")).toBe("PS4");
+    expect(normalizePlatform("ps5")).toBe("PS5");
+    expect(normalizePlatform("playstation 5")).toBe("PS5");
+    expect(normalizePlatform("playstation 3")).toBe("PS3");
+  });
+
+  it("handles handhelds and generic platform", () => {
+    expect(normalizePlatform("ps vita")).toBe("PS Vita");
+    expect(normalizePlatform("vita")).toBe("PS Vita");
+    expect(normalizePlatform("psp")).toBe("PSP");
+    expect(normalizePlatform("playstation")).toBe("PlayStation");
+  });
+
+  it("passes through unknown and null values", () => {
+    expect(normalizePlatform("Switch")).toBe("Switch");
+    expect(normalizePlatform(null)).toBeNull();
+    expect(normalizePlatform(undefined)).toBeUndefined();
+    expect(normalizePlatform("")).toBe("");
   });
 });
