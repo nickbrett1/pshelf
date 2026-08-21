@@ -94,7 +94,10 @@ export function mapRow(row) {
     format: row.format ?? row.media_type ?? "unknown",
     ownership_class: row.ownership_class ?? "unknown",
     retailer: row.retailer ?? null,
-    cover: coverPath(row.cover_url ?? row.cover),
+    // Prefer mailroom's locally-cached cover (cover_local = '/covers/<id>.jpg',
+    // served as a static file from the shared /data mount). Fall back to the
+    // live IGDB proxy path for games that aren't cached yet.
+    cover: row.cover_local ?? coverPath(row.cover_url ?? row.cover),
     rating: row.rating ?? null,
     year: row.year ?? row.release_year ?? null,
     genres: parseList(row.genres ?? row.genre ?? ""),

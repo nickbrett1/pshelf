@@ -146,6 +146,19 @@ describe("mapRow", () => {
     });
   });
 
+  it("prefers the locally-cached cover over the proxy path", () => {
+    const row = {
+      title: "Bloodborne",
+      cover_url: "//images.igdb.com/igdb/image/upload/t_thumb/co1.jpg",
+      cover_local: "/covers/co1.jpg",
+    };
+    expect(mapRow(row).cover).toBe("/covers/co1.jpg");
+    // without cover_local it falls back to the proxy rewrite
+    expect(mapRow({ title: "B", cover_url: "//img/x.jpg" }).cover).toBe(
+      "https://img/x.jpg",
+    );
+  });
+
   it("falls back gracefully when columns are missing", () => {
     const mapped = mapRow({ title: "Untitled" });
     expect(mapped.platform).toBe("Unknown");
