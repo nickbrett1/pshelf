@@ -186,7 +186,24 @@
         <article class="card">
           <div class="cover">
             {#if game.cover}
-              <img src={game.cover} alt="" loading="lazy" />
+              <img
+                src={game.cover}
+                alt=""
+                width="210"
+                height="280"
+                decoding="async"
+                onerror={(e) => {
+                  e.currentTarget.style.display = "none";
+                  const ph =
+                    e.currentTarget.parentElement?.querySelector(
+                      ".cover-placeholder",
+                    );
+                  if (ph) ph.style.display = "flex";
+                }}
+              />
+              <div class="cover-placeholder" style="display:none">
+                {game.title.charAt(0)}
+              </div>
             {:else}
               <div class="cover-placeholder">{game.title.charAt(0)}</div>
             {/if}
