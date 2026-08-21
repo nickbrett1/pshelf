@@ -35,7 +35,7 @@ jobs:
 
   docker-publish:
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:2024.01.1
     resource_class: medium
     environment:
       # BuildKit layer cache ref (ghcr.io registry cache, mode=max). Cache-only
