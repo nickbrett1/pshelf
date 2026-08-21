@@ -94,13 +94,19 @@ describe("normalizeCover", () => {
 });
 
 describe("coverPath", () => {
-  it("rewrites IGDB covers to same-origin proxy paths", () => {
+  it("rewrites IGDB covers to same-origin proxy paths at high resolution", () => {
     expect(
       coverPath("https://images.igdb.com/igdb/image/upload/t_thumb/co1.jpg"),
-    ).toBe("/img/igdb/image/upload/t_thumb/co1.jpg");
+    ).toBe("/img/igdb/image/upload/t_cover_big_2x/co1.jpg");
     expect(
       coverPath("//images.igdb.com/igdb/image/upload/t_thumb/co2.jpg"),
-    ).toBe("/img/igdb/image/upload/t_thumb/co2.jpg");
+    ).toBe("/img/igdb/image/upload/t_cover_big_2x/co2.jpg");
+    // any stored size is upgraded, not just t_thumb
+    expect(
+      coverPath(
+        "https://images.igdb.com/igdb/image/upload/t_cover_big/co3.jpg",
+      ),
+    ).toBe("/img/igdb/image/upload/t_cover_big_2x/co3.jpg");
   });
 
   it("leaves non-IGDB covers as absolute URLs and nulls empties", () => {

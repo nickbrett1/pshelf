@@ -60,11 +60,24 @@ export function normalizeCover(url) {
  * @param {string|null|undefined} url
  * @returns {string|null}
  */
+// IGDB serves covers in preset sizes (e.g. t_thumb, t_cover_big, t_cover_big_2x).
+// The catalog stores t_thumb (~90px), which is far too small for our
+// ~180-250px cards and looks blurry once upscaled. Request the 2x cover
+// variant (528x748) so covers stay crisp on HiDPI/retina displays.
+const IGDB_COVER_SIZE = "t_cover_big_2x";
+
 export function coverPath(url) {
   const normalized = normalizeCover(url);
   if (!normalized) return null;
   const m = normalized.match(/^https:\/\/images\.igdb\.com\/(.+)$/);
-  return m ? `/img/${m[1]}` : normalized;
+  if (!m) return normalized;
+  // Swap whatever size IGDB stored (t_thumb, t_cover_big, ...) for the
+  // high-resolution cover variant before proxying.
+  const highres = m[1].replace(
+    /^igdb\/image\/upload\/[^/]+\//,
+    `igdb/image/upload/${IGDB_COVER_SIZE}/`,
+  );
+  return `/img/${highres}`;
 }
 
 /**

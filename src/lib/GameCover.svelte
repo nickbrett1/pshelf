@@ -45,6 +45,7 @@
       width="210"
       height="280"
       decoding="async"
+      loading="lazy"
       class:ready={coverReady}
     />
   {/if}
