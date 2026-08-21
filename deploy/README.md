@@ -6,8 +6,8 @@
 
 ## 1. Build & publish the image
 
-The repository's CircleCI config contains a `docker-publish` job that builds a
-multi-arch image (linux/amd64 + linux/arm64) and pushes it to
+The repository's CircleCI config contains a `docker-publish` job that builds an
+image for the deployment host's architecture (`linux/amd64`) and pushes it to
 `ghcr.io/nickbrett1/pshelf` on every push to
 `main` (tagged with the commit SHA and `latest`).
 
