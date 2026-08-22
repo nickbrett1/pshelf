@@ -45,6 +45,34 @@ export function GET() {
           )
           .all()
       : [];
+    // Inspect the underlying tables to see whether IGDB metadata / cover cache
+    // data actually exists (game_metadata payloads, game_covers rows).
+    let gameMetadata = null;
+    let gameCovers = null;
+    try {
+      gameMetadata = {
+        rows: db.prepare("SELECT COUNT(*) AS n FROM game_metadata").get().n,
+        withCoverUrl: db
+          .prepare(
+            "SELECT COUNT(*) AS n FROM game_metadata WHERE json_extract(payload, '$.cover.url') IS NOT NULL",
+          )
+          .get().n,
+      };
+    } catch {
+      gameMetadata = { error: "table missing" };
+    }
+    try {
+      gameCovers = {
+        rows: db.prepare("SELECT COUNT(*) AS n FROM game_covers").get().n,
+        withLocalPath: db
+          .prepare(
+            "SELECT COUNT(*) AS n FROM game_covers WHERE local_path IS NOT NULL",
+          )
+          .get().n,
+      };
+    } catch {
+      gameCovers = { error: "table missing" };
+    }
     db.close();
     return new Response(
       JSON.stringify({
@@ -56,6 +84,8 @@ export function GET() {
         hasCoverUrl,
         coverUrlSet,
         samples,
+        gameMetadata,
+        gameCovers,
       }),
       { status: 200, headers: { "content-type": "application/json" } },
     );
