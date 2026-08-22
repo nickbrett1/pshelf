@@ -169,7 +169,9 @@
         {#if data.needsMatchCount > 0}
           <a href="/fix">Fix IGDB ({data.needsMatchCount})</a>
         {/if}
-        <a href="/psn">PSN credential</a>
+        {#if data.psnNeedsRefresh}
+          <a href="/psn">Refresh PSN</a>
+        {/if}
       </nav>
     </div>
   </header>

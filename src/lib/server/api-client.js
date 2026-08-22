@@ -126,7 +126,7 @@ export async function excludeNonGame(ownedGameId, note = null) {
 }
 
 /** @returns {Promise<{status: string, last_success: string|null, last_error: string|null, expires_at: string|null}>} */
-export async function getPsnCredential() {
+export async function getPsnCredential({ timeout = 8000 } = {}) {
   const fallback = {
     status: "needs_refresh",
     last_success: null,
@@ -135,7 +135,7 @@ export async function getPsnCredential() {
   };
   try {
     const res = await fetch(`${MANUAL_API}/manual/psn-credential`, {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(timeout),
     });
     if (!res.ok) return { ...fallback, last_error: `manual API ${res.status}` };
     return { ...fallback, ...(await res.json()) };
