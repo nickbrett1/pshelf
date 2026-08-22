@@ -85,6 +85,12 @@
 
   const split = $derived(keepIfCancelPsPlus(data.games));
 
+  // Hero stats: physical discs and PSVR2 titles (is_psvr2 from catalog_views).
+  const physicalCount = $derived(
+    data.games.filter((g) => g.format === "physical").length,
+  );
+  const psvr2Count = $derived(data.games.filter((g) => g.psvr2).length);
+
   // Progressive rendering: render the first PAGE games server-side, then reveal
   // more as the user scrolls (IntersectionObserver sentinel). This keeps the
   // initial SSR HTML and DOM small — the covers themselves are already
@@ -159,7 +165,7 @@
       <div class="brand">
         <img src="{assets}/favicon.svg" alt="Pshelf" class="logo" />
         <h1>Pshelf</h1>
-        <p class="tagline">Your PlayStation catalog</p>
+        <p class="tagline">Your PlayStation games on the shelf</p>
       </div>
       <div class="stats">
         <div class="stat">
@@ -167,12 +173,16 @@
           <span class="stat-label">Games</span>
         </div>
         <div class="stat">
-          <span class="stat-num">{split.owned}</span>
-          <span class="stat-label">Keep if PS+ canceled</span>
+          <span class="stat-num">{physicalCount}</span>
+          <span class="stat-label">Physical</span>
         </div>
         <div class="stat">
           <span class="stat-num">{split.psplus}</span>
           <span class="stat-label">On PS+</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">{psvr2Count}</span>
+          <span class="stat-label">PSVR2</span>
         </div>
       </div>
       <nav>
@@ -180,7 +190,7 @@
           <a href="/fix">Fix IGDB ({data.needsMatchCount})</a>
         {/if}
         {#if data.psnNeedsRefresh}
-          <a href="/psn">Refresh PSN</a>
+          <a href="/psn">Stale PSN Token</a>
         {/if}
       </nav>
     </div>

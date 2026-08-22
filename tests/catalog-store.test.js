@@ -92,6 +92,7 @@ describe("mapRow", () => {
       rating: 89,
       year: 2017,
       genres: ["Action RPG"],
+      psvr2: false,
     });
   });
 
@@ -101,6 +102,14 @@ describe("mapRow", () => {
     ).toBe("/covers/co1.jpg");
     // no cached cover -> placeholder (no live IGDB dependency)
     expect(mapRow({ title: "B", cover_url: "//img/x.jpg" }).cover).toBeNull();
+  });
+
+  it("maps the is_psvr2 flag to a boolean", () => {
+    expect(mapRow({ title: "Horizon VR", is_psvr2: 1 }).psvr2).toBe(true);
+    expect(mapRow({ title: "Horizon VR", is_psvr2: true }).psvr2).toBe(true);
+    expect(mapRow({ title: "Skyrim", is_psvr2: 0 }).psvr2).toBe(false);
+    expect(mapRow({ title: "Skyrim", is_psvr2: null }).psvr2).toBe(false);
+    expect(mapRow({ title: "Skyrim" }).psvr2).toBe(false);
   });
 
   it("falls back gracefully when columns are missing", () => {

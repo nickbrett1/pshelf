@@ -57,6 +57,9 @@ export function mapRow(row) {
     rating: row.rating ?? null,
     year: row.year ?? row.release_year ?? null,
     genres: parseList(row.genres ?? row.genre ?? ""),
+    // PSVR2 flag from catalog_views.is_psvr2 (IGDB platform 390). A category
+    // flag, not a platform — PSVR2 games run on PS5, so platform stays PS5.
+    psvr2: row.is_psvr2 === 1 || row.is_psvr2 === true,
   };
 }
 
