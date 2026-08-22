@@ -399,7 +399,13 @@
   }
 
   .controls {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     margin-bottom: 20px;
+    padding: 10px 0;
+    background: #0f1117;
+    border-bottom: 1px solid #1c2130;
   }
   .search {
     width: 100%;
