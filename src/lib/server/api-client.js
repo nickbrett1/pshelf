@@ -51,10 +51,10 @@ export function parseIgdbCandidates(json) {
 }
 
 /** @returns {Promise<Array<Object>>} list of unmatched owned games */
-export async function getNeedsMatch() {
+export async function getNeedsMatch({ timeout = 8000 } = {}) {
   try {
     const res = await fetch(`${MANUAL_API}/manual/needs-match`, {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(timeout),
     });
     if (!res.ok) return [];
     return parseNeedsMatch(await res.json());

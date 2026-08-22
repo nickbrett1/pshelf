@@ -166,7 +166,9 @@
         </div>
       </div>
       <nav>
-        <a href="/fix">Fix IGDB</a>
+        {#if data.needsMatchCount > 0}
+          <a href="/fix">Fix IGDB ({data.needsMatchCount})</a>
+        {/if}
         <a href="/psn">PSN</a>
       </nav>
     </div>
