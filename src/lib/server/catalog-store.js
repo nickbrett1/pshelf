@@ -22,7 +22,7 @@ const DEFAULT_DB_CANDIDATES = ["catalog.db", "mailroom.db", "mailroom.db-wal"];
  * DB path and otherwise scanning the data mount for known file names.
  * @returns {string|null}
  */
-function resolveDbPath() {
+export function resolveDbPath() {
   const dataDir = process.env.CATALOG_DB_PATH ?? "/data";
   if (dataDir.endsWith(".db") && existsSync(dataDir)) return dataDir;
 
