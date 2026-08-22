@@ -71,12 +71,6 @@
       switch (sortBy) {
         case "title":
           return a.title.localeCompare(b.title);
-        case "platform":
-          return (
-            normalizePlatform(a.platform).localeCompare(
-              normalizePlatform(b.platform),
-            ) || a.title.localeCompare(b.title)
-          );
         case "rating":
           return (b.rating ?? 0) - (a.rating ?? 0);
         default:
@@ -258,9 +252,8 @@
         </select>
 
         <select bind:value={sortBy} aria-label="Sort">
-          <option value="title">Sort by title</option>
-          <option value="platform">Sort by platform</option>
-          <option value="rating">Sort by rating</option>
+          <option value="title">Sort by Title</option>
+          <option value="rating">Sort by Rating</option>
         </select>
 
         <button class="reset" onclick={resetFilters}>Reset</button>
