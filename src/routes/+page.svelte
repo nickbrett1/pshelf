@@ -49,10 +49,13 @@
 
   const filtered = $derived.by(() => {
     let games = filterGames(data.games, debouncedQuery);
-    if (platformFilter !== "all")
+    if (platformFilter === "psvr2") {
+      games = games.filter((g) => g.psvr2);
+    } else if (platformFilter !== "all") {
       games = games.filter(
         (g) => normalizePlatform(g.platform) === platformFilter,
       );
+    }
     if (formatFilter !== "all")
       games = games.filter((g) => g.format === formatFilter);
     if (classFilter !== "all")
@@ -144,6 +147,12 @@
     return labels[cls] ?? cls;
   }
 
+  function formatLabel(fmt) {
+    return fmt
+      ? String(fmt).charAt(0).toUpperCase() + String(fmt).slice(1)
+      : fmt;
+  }
+
   function resetFilters() {
     query = "";
     debouncedQuery = "";
@@ -165,7 +174,7 @@
       <div class="brand">
         <img src="{assets}/favicon.svg" alt="Pshelf" class="logo" />
         <h1>Pshelf</h1>
-        <p class="tagline">Your PlayStation games on the shelf</p>
+        <p class="tagline">PlayStation Games on the Shelf</p>
       </div>
       <div class="stats">
         <div class="stat">
@@ -211,7 +220,7 @@
     <section class="controls">
       <input
         type="search"
-        placeholder="Search title or platform…"
+        placeholder="Search Title…"
         class="search"
         bind:value={query}
         oninput={onSearchInput}
@@ -220,28 +229,29 @@
 
       <div class="filters">
         <select bind:value={platformFilter} aria-label="Filter by platform">
-          <option value="all">All platforms</option>
+          <option value="all">All Platforms</option>
           {#each platforms as p}
             <option value={p}>{p}</option>
           {/each}
+          <option value="psvr2">PSVR2</option>
         </select>
 
         <select bind:value={formatFilter} aria-label="Filter by format">
-          <option value="all">All formats</option>
+          <option value="all">All Formats</option>
           {#each formats as f}
-            <option value={f}>{f}</option>
+            <option value={f}>{formatLabel(f)}</option>
           {/each}
         </select>
 
         <select bind:value={classFilter} aria-label="Filter by ownership">
-          <option value="all">All ownership</option>
+          <option value="all">All Ownership</option>
           {#each classes as c}
             <option value={c}>{formatClass(c)}</option>
           {/each}
         </select>
 
         <select bind:value={genreFilter} aria-label="Filter by genre">
-          <option value="all">All genres</option>
+          <option value="all">All Genres</option>
           {#each genres as g}
             <option value={g}>{g}</option>
           {/each}
@@ -267,7 +277,7 @@
             <h3 class="title">{@html highlight(game.title)}</h3>
             <div class="meta">
               <span class="platform">{normalizePlatform(game.platform)}</span>
-              <span class="format">{game.format}</span>
+              <span class="format">{formatLabel(game.format)}</span>
               <span class="class">{formatClass(game.ownership_class)}</span>
             </div>
             {#if game.genres.length}
