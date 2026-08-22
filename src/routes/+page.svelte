@@ -15,6 +15,7 @@
   let platformFilter = $state("all");
   let formatFilter = $state("all");
   let classFilter = $state("all");
+  let genreFilter = $state("all");
   let sortBy = $state("title");
 
   let debounceTimer;
@@ -40,6 +41,11 @@
       ...new Set(data.games.map((g) => g.ownership_class).filter(Boolean)),
     ].sort(),
   );
+  const genres = $derived(
+    [...new Set(data.games.flatMap((g) => g.genres ?? []))]
+      .filter(Boolean)
+      .sort(),
+  );
 
   const filtered = $derived.by(() => {
     let games = filterGames(data.games, debouncedQuery);
@@ -51,6 +57,8 @@
       games = games.filter((g) => g.format === formatFilter);
     if (classFilter !== "all")
       games = games.filter((g) => g.ownership_class === classFilter);
+    if (genreFilter !== "all")
+      games = games.filter((g) => (g.genres ?? []).includes(genreFilter));
     return games;
   });
 
@@ -89,7 +97,8 @@
     debouncedQuery.trim() !== "" ||
       platformFilter !== "all" ||
       formatFilter !== "all" ||
-      classFilter !== "all",
+      classFilter !== "all" ||
+      genreFilter !== "all",
   );
 
   const visible = $derived(
@@ -135,6 +144,7 @@
     platformFilter = "all";
     formatFilter = "all";
     classFilter = "all";
+    genreFilter = "all";
     sortBy = "title";
   }
 </script>
@@ -191,7 +201,7 @@
     <section class="controls">
       <input
         type="search"
-        placeholder="Search title, genre, platform, retailer…"
+        placeholder="Search title or platform…"
         class="search"
         bind:value={query}
         oninput={onSearchInput}
@@ -217,6 +227,13 @@
           <option value="all">All ownership</option>
           {#each classes as c}
             <option value={c}>{formatClass(c)}</option>
+          {/each}
+        </select>
+
+        <select bind:value={genreFilter} aria-label="Filter by genre">
+          <option value="all">All genres</option>
+          {#each genres as g}
+            <option value={g}>{g}</option>
           {/each}
         </select>
 
