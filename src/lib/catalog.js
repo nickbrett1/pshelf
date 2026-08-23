@@ -47,8 +47,10 @@ export function normalizePlatform(raw) {
 }
 
 /**
- * Filter an in-memory list of owned games by a free-text query.
- * Case-insensitive match against title, genre, platform and retailer.
+ * Filter an in-memory list of games by a free-text query.
+ * Case-insensitive match against title, genre, platforms and retailer.
+ * Platforms is now the aggregated list (per the Catalog Games Model), so the
+ * query matches any of a game's platforms.
  * @param {Array<Object>} games
  * @param {string} query
  * @returns {Array<Object>}
@@ -59,12 +61,12 @@ export function filterGames(games, query) {
   return games.filter((game) => {
     const title = (game.title ?? "").toLowerCase();
     const genres = (game.genres ?? []).join(" ").toLowerCase();
-    const platform = (game.platform ?? "").toLowerCase();
+    const platforms = (game.platforms ?? []).join(" ").toLowerCase();
     const retailer = (game.retailer ?? "").toLowerCase();
     return (
       title.includes(q) ||
       genres.includes(q) ||
-      platform.includes(q) ||
+      platforms.includes(q) ||
       retailer.includes(q)
     );
   });
@@ -72,21 +74,15 @@ export function filterGames(games, query) {
 
 /**
  * Compute the "keep if I cancel PS+" split from a list of games.
+ * Per the Catalog Games Model a game is "kept" iff any of its editions was
+ * purchased (`purchased === true`), regardless of other editions being PS+
+ * claimed. One card per game, so each game counts once.
  * @param {Array<Object>} games
  * @returns {{owned: number, psplus: number, ownedByTitle: Array<Object>}}
  */
 export function keepIfCancelPsPlus(games) {
-  const owned = games.filter(
-    (g) =>
-      g.ownership_class &&
-      g.ownership_class !== "psplus_claimed" &&
-      g.ownership_class !== "psplus_extra",
-  );
-  const psplus = games.filter(
-    (g) =>
-      g.ownership_class === "psplus_claimed" ||
-      g.ownership_class === "psplus_extra",
-  );
+  const owned = games.filter((g) => g.purchased);
+  const psplus = games.filter((g) => !g.purchased);
   return {
     owned: owned.length,
     psplus: psplus.length,

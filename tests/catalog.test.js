@@ -8,22 +8,22 @@ import {
 const games = [
   {
     title: "Bloodborne",
-    platform: "PS4",
-    ownership_class: "purchased",
+    platforms: ["PS4"],
+    purchased: true,
     genres: ["Action RPG"],
     retailer: "PSN",
   },
   {
     title: "Returnal",
-    platform: "PS5",
-    ownership_class: "psplus_extra",
+    platforms: ["PS5"],
+    purchased: false,
     genres: ["Roguelike", "Shooter"],
     retailer: "PSN",
   },
   {
     title: "Horizon Zero Dawn",
-    platform: "PS4",
-    ownership_class: "purchased",
+    platforms: ["PS4"],
+    purchased: true,
     genres: ["Action RPG"],
     retailer: "PSN",
   },
@@ -44,11 +44,26 @@ describe("filterGames", () => {
     ]);
   });
 
-  it("matches genres and platform", () => {
+  it("matches genres and any platform in the aggregated list", () => {
     expect(filterGames(games, "roguelike").map((g) => g.title)).toEqual([
       "Returnal",
     ]);
     expect(filterGames(games, "ps5").map((g) => g.title)).toEqual(["Returnal"]);
+  });
+
+  it("matches a multi-platform game by any of its platforms", () => {
+    const multi = [
+      {
+        title: "Alien Isolation",
+        platforms: ["PS4", "PS5"],
+        purchased: true,
+        genres: [],
+        retailer: null,
+      },
+    ];
+    expect(filterGames(multi, "ps5").map((g) => g.title)).toEqual([
+      "Alien Isolation",
+    ]);
   });
 
   it("returns empty when nothing matches", () => {
@@ -57,7 +72,7 @@ describe("filterGames", () => {
 });
 
 describe("keepIfCancelPsPlus", () => {
-  it("splits owned vs psplus titles", () => {
+  it("splits kept (purchased) vs lost (PS+) games, one card each", () => {
     const split = keepIfCancelPsPlus(games);
     expect(split.owned).toBe(2);
     expect(split.psplus).toBe(1);
@@ -65,6 +80,28 @@ describe("keepIfCancelPsPlus", () => {
       "Bloodborne",
       "Horizon Zero Dawn",
     ]);
+  });
+
+  it("counts a game as kept when any edition was purchased", () => {
+    const mixed = [
+      {
+        title: "Slay the Spire",
+        platforms: ["PS5"],
+        purchased: true,
+        genres: [],
+        retailer: null,
+      },
+      {
+        title: "Arcade Paradise",
+        platforms: ["PS5"],
+        purchased: false,
+        genres: [],
+        retailer: null,
+      },
+    ];
+    const split = keepIfCancelPsPlus(mixed);
+    expect(split.owned).toBe(1);
+    expect(split.psplus).toBe(1);
   });
 });
 

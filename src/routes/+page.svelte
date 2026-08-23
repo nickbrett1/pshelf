@@ -26,19 +26,27 @@
     }, 200);
   }
 
+  // One game per card; platforms/formats/ownership are distinct lists across
+  // the game's editions (Catalog Games Model).
   const platforms = $derived(
     [
       ...new Set(
-        data.games.map((g) => normalizePlatform(g.platform)).filter(Boolean),
+        data.games
+          .flatMap((g) => (g.platforms ?? []).map(normalizePlatform))
+          .filter(Boolean),
       ),
     ].sort(),
   );
   const formats = $derived(
-    [...new Set(data.games.map((g) => g.format).filter(Boolean))].sort(),
+    [
+      ...new Set(data.games.flatMap((g) => g.formats ?? []).filter(Boolean)),
+    ].sort(),
   );
   const classes = $derived(
     [
-      ...new Set(data.games.map((g) => g.ownership_class).filter(Boolean)),
+      ...new Set(
+        data.games.flatMap((g) => g.ownership_classes ?? []).filter(Boolean),
+      ),
     ].sort(),
   );
   const genres = $derived(
@@ -52,14 +60,18 @@
     if (platformFilter === "psvr2") {
       games = games.filter((g) => g.psvr2);
     } else if (platformFilter !== "all") {
-      games = games.filter(
-        (g) => normalizePlatform(g.platform) === platformFilter,
+      games = games.filter((g) =>
+        (g.platforms ?? []).some(
+          (p) => normalizePlatform(p) === platformFilter,
+        ),
       );
     }
     if (formatFilter !== "all")
-      games = games.filter((g) => g.format === formatFilter);
+      games = games.filter((g) => (g.formats ?? []).includes(formatFilter));
     if (classFilter !== "all")
-      games = games.filter((g) => g.ownership_class === classFilter);
+      games = games.filter((g) =>
+        (g.ownership_classes ?? []).includes(classFilter),
+      );
     if (genreFilter !== "all")
       games = games.filter((g) => (g.genres ?? []).includes(genreFilter));
     return games;
@@ -82,9 +94,10 @@
 
   const split = $derived(keepIfCancelPsPlus(data.games));
 
-  // Hero stats: physical discs and PSVR2 titles (is_psvr2 from catalog_views).
+  // Hero stats: physical discs and PSVR2 titles (is_psvr2 from catalog_games).
+  // "Physical" counts games that have at least one physical edition.
   const physicalCount = $derived(
-    data.games.filter((g) => g.format === "physical").length,
+    data.games.filter((g) => (g.formats ?? []).includes("physical")).length,
   );
   const psvr2Count = $derived(data.games.filter((g) => g.psvr2).length);
 
@@ -147,6 +160,26 @@
       : fmt;
   }
 
+  // Expanded multi-edition detail (Catalog Games Model): toggles a game's
+  // editions list on the card.
+  let expanded = $state(new Set());
+  function toggleExpand(id) {
+    const next = new Set(expanded);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    expanded = next;
+  }
+
+  function formatPrice(price) {
+    if (price == null || price === "") return null;
+    const n = Number(price);
+    if (Number.isNaN(n)) return null;
+    return `$${n.toFixed(2)}`;
+  }
+
   function resetFilters() {
     query = "";
     debouncedQuery = "";
@@ -203,7 +236,8 @@
     <section class="empty">
       <h2>No catalog loaded</h2>
       <p>
-        Pshelf reads <code>catalog_views</code> from the read-only
+        Pshelf reads <code>catalog_games</code> (one card per logical game, per
+        the Catalog Games Model) from the read-only
         <code>/data</code>
         mount. The catalog DB wasn't found — check <code>CATALOG_DB_PATH</code>
         and that the
@@ -264,15 +298,34 @@
 
     <section class="grid">
       {#each visible as game (game.key)}
-        <article class="card">
+        <button
+          type="button"
+          class:card
+          class:expanded={expanded.has(game.id)}
+          onclick={() => toggleExpand(game.id)}
+        >
           <GameCover {game} />
           <div class="card-body">
             <h3 class="title">{@html highlight(game.title)}</h3>
             <div class="meta">
-              <span class="platform">{normalizePlatform(game.platform)}</span>
-              <span class="format">{formatLabel(game.format)}</span>
-              <span class="class">{formatClass(game.ownership_class)}</span>
+              <span class="platform">
+                {(game.platforms ?? [])
+                  .map(normalizePlatform)
+                  .filter(Boolean)
+                  .join(" / ")}
+              </span>
+              {#if (game.formats ?? []).length}
+                <span class="format">
+                  {(game.formats ?? []).map(formatLabel).join(" / ")}
+                </span>
+              {/if}
+              {#if (game.num_editions ?? 1) > 1}
+                <span class="editions">{game.num_editions} editions</span>
+              {/if}
             </div>
+            <span class="badge" class:owned={game.purchased}>
+              {game.purchased ? "Owned" : "On PS+"}
+            </span>
             {#if game.genres.length}
               <p class="genres">{@html highlight(game.genres.join(", "))}</p>
             {/if}
@@ -283,7 +336,35 @@
               <p class="rating">★ {game.rating.toFixed(1)}</p>
             {/if}
           </div>
-        </article>
+          {#if expanded.has(game.id) && game.editions.length}
+            <div class="editions-panel">
+              <h4>Editions</h4>
+              {#each game.editions as ed (ed.id ?? ed.title ?? ed)}
+                <div class="edition">
+                  <span class="ed-title">{ed.title ?? game.title}</span>
+                  <span class="ed-meta">
+                    {#if ed.platform}
+                      {normalizePlatform(ed.platform)}
+                    {/if}
+                    {#if ed.format}{formatLabel(ed.format)}{/if}
+                  </span>
+                  <span
+                    class="ed-class"
+                    class:owned={ed.ownership_class === "purchased"}
+                  >
+                    {formatClass(ed.ownership_class)}
+                  </span>
+                  {#if formatPrice(ed.price)}
+                    <span class="ed-price">{formatPrice(ed.price)}</span>
+                  {/if}
+                  {#if ed.acquisition_date}
+                    <span class="ed-date">{ed.acquisition_date}</span>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </button>
       {/each}
     </section>
 
@@ -458,6 +539,21 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      transform 0.15s ease;
+    text-align: left;
+    font: inherit;
+    padding: 0;
+    color: inherit;
+    width: 100%;
+  }
+  .card:hover {
+    border-color: #2f3650;
+  }
+  .card.expanded {
+    border-color: #e94560;
   }
   .card-body {
     padding: 12px;
@@ -498,5 +594,71 @@
     color: #ffd166;
     font-size: 0.85rem;
     font-weight: 600;
+  }
+
+  /* Owned vs on-PS+ indicator (Catalog Games Model: purchased = keep). */
+  .badge {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #3a3142;
+    color: #cbb8e0;
+  }
+  .badge.owned {
+    background: #1e3a2f;
+    color: #7ce8b0;
+  }
+
+  /* Multi-edition badge in the card meta. */
+  .meta .editions {
+    background: #2b2a3a;
+    color: #c7cbe0;
+    font-weight: 600;
+  }
+
+  /* Expanded editions detail. */
+  .editions-panel {
+    border-top: 1px solid #232838;
+    padding: 12px;
+    background: #12151d;
+  }
+  .editions-panel h4 {
+    margin: 0 0 8px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7c85a0;
+  }
+  .edition {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid #1a1f2b;
+    font-size: 0.8rem;
+  }
+  .edition:last-child {
+    border-bottom: none;
+  }
+  .ed-title {
+    font-weight: 600;
+    color: #e6e8ee;
+  }
+  .ed-meta {
+    color: #9aa3b5;
+  }
+  .ed-class {
+    color: #cbb8e0;
+  }
+  .ed-class.owned {
+    color: #7ce8b0;
+  }
+  .ed-price {
+    color: #ffd166;
+  }
+  .ed-date {
+    color: #6b7488;
   }
 </style>

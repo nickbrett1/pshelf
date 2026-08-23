@@ -28,7 +28,32 @@ beforeEach(() => {
   process.env.CATALOG_DB_PATH = dbPath;
 });
 
-function seedDb() {
+function seedGamesDb() {
+  rmSync(dbPath, { force: true });
+  const db = new DatabaseSync(dbPath);
+  db.exec(`
+		CREATE VIEW catalog_games AS
+		SELECT
+			1 AS game_id,
+			'Bloodborne' AS title,
+			'PS4' AS platform,
+			'PS4' AS platforms,
+			'digital' AS formats,
+			'purchased' AS ownership_classes,
+			1 AS num_editions,
+			1 AS purchased,
+			'PSN' AS retailer,
+			'/covers/bb.jpg' AS cover_local,
+			92 AS rating,
+			2015 AS year,
+			'Action RPG, Souls' AS genres,
+			0 AS is_psvr2,
+			'[{"id":1,"title":"Bloodborne","platform":"PS4","format":"digital","ownership_class":"purchased","price":19.99,"acquisition_date":"2015-03-24"}]' AS editions;
+	`);
+  db.close();
+}
+
+function seedViewsDb() {
   rmSync(dbPath, { force: true });
   const db = new DatabaseSync(dbPath);
   db.exec(`
@@ -52,13 +77,28 @@ function seedDb() {
 }
 
 describe("loadCatalog", () => {
-  it("reads and maps catalog_views from the configured DB", () => {
-    seedDb();
+  it("reads and maps catalog_games (one card per logical game)", () => {
+    seedGamesDb();
+    const games = loadCatalog();
+    expect(games).toHaveLength(1);
+    expect(games[0].title).toBe("Bloodborne");
+    expect(games[0].id).toBe(1);
+    expect(games[0].platforms).toEqual(["PS4"]);
+    expect(games[0].genres).toEqual(["Action RPG", "Souls"]);
+    expect(games[0].purchased).toBe(true);
+    expect(games[0].num_editions).toBe(1);
+    expect(games[0].editions).toHaveLength(1);
+    expect(games[0].editions[0].ownership_class).toBe("purchased");
+  });
+
+  it("falls back to catalog_views when catalog_games is absent", () => {
+    seedViewsDb();
     const games = loadCatalog();
     expect(games).toHaveLength(2);
     expect(games[0].title).toBe("Bloodborne");
     expect(games[0].genres).toEqual(["Action RPG", "Souls"]);
-    expect(games[1].ownership_class).toBe("psplus_extra");
+    expect(games[0].platforms).toEqual(["PS4"]);
+    expect(games[1].purchased).toBe(false);
   });
 
   it("returns [] when the DB file does not exist", () => {
@@ -68,7 +108,66 @@ describe("loadCatalog", () => {
 });
 
 describe("mapRow", () => {
-  it("maps a full row to the UI contract", () => {
+  it("maps a catalog_games row to the UI contract", () => {
+    const row = {
+      game_id: 7,
+      title: "Alien Isolation",
+      platforms: "PS4,PS5",
+      formats: "digital,physical",
+      ownership_classes: "purchased",
+      num_editions: 2,
+      purchased: 1,
+      retailer: "PSN",
+      cover_local: "/covers/ai.jpg",
+      rating: 90,
+      year: 2014,
+      genres: "Survival Horror",
+      is_psvr2: 0,
+      editions: JSON.stringify([
+        {
+          id: 7,
+          title: "Alien Isolation",
+          platform: "PS4",
+          format: "digital",
+          ownership_class: "purchased",
+          price: 29.99,
+          acquisition_date: "2014-10-07",
+        },
+      ]),
+    };
+    expect(mapRow(row)).toEqual({
+      id: 7,
+      title: "Alien Isolation",
+      platforms: ["PS4", "PS5"],
+      formats: ["digital", "physical"],
+      ownership_classes: ["purchased"],
+      num_editions: 2,
+      purchased: true,
+      retailer: "PSN",
+      cover: "/covers/ai.jpg",
+      rating: 90,
+      year: 2014,
+      genres: ["Survival Horror"],
+      psvr2: false,
+      editions: [
+        {
+          id: 7,
+          title: "Alien Isolation",
+          platform: "PS4",
+          format: "digital",
+          ownership_class: "purchased",
+          price: 29.99,
+          acquisition_date: "2014-10-07",
+        },
+      ],
+      price: null,
+      earliest_acquisition: null,
+      provenance: [],
+      igdb_id: null,
+    });
+  });
+
+  it("parses a legacy catalog_views row into the same contract", () => {
     const row = {
       owned_game_id: 42,
       title: "Horizon",
@@ -84,15 +183,22 @@ describe("mapRow", () => {
     expect(mapRow(row)).toEqual({
       id: 42,
       title: "Horizon",
-      platform: "PS4",
-      format: "physical",
-      ownership_class: "purchased",
+      platforms: ["PS4"],
+      formats: ["physical"],
+      ownership_classes: ["purchased"],
+      num_editions: 1,
+      purchased: true,
       retailer: "GameStop",
       cover: "/covers/h.jpg",
       rating: 89,
       year: 2017,
       genres: ["Action RPG"],
       psvr2: false,
+      editions: [],
+      price: null,
+      earliest_acquisition: null,
+      provenance: [],
+      igdb_id: null,
     });
   });
 
@@ -112,10 +218,22 @@ describe("mapRow", () => {
     expect(mapRow({ title: "Skyrim" }).psvr2).toBe(false);
   });
 
+  it("parses the editions JSON column and tolerates bad/missing JSON", () => {
+    expect(
+      mapRow({ title: "Slay the Spire", editions: "[1,2]" }).editions,
+    ).toEqual([1, 2]);
+    expect(mapRow({ title: "Bad", editions: "not json" }).editions).toEqual([]);
+    expect(mapRow({ title: "None" }).editions).toEqual([]);
+    expect(mapRow({ title: "Arr", editions: [{ id: 1 }] }).editions).toEqual([
+      { id: 1 },
+    ]);
+  });
+
   it("falls back gracefully when columns are missing", () => {
     const mapped = mapRow({ title: "Untitled" });
-    expect(mapped.platform).toBe("Unknown");
-    expect(mapped.ownership_class).toBe("unknown");
+    expect(mapped.platforms).toEqual([]);
+    expect(mapped.formats).toEqual([]);
+    expect(mapped.ownership_classes).toEqual([]);
     expect(mapped.genres).toEqual([]);
     expect(mapped.id).toBeNull();
   });
