@@ -3,6 +3,7 @@ import {
   filterGames,
   keepIfCancelPsPlus,
   normalizePlatform,
+  parseAcquisitionDate,
 } from "../src/lib/catalog.js";
 
 const games = [
@@ -128,5 +129,30 @@ describe("normalizePlatform", () => {
     expect(normalizePlatform(null)).toBeNull();
     expect(normalizePlatform(undefined)).toBeUndefined();
     expect(normalizePlatform("")).toBe("");
+  });
+});
+
+describe("parseAcquisitionDate", () => {
+  it("parses ISO dates to a TZ-independent sortable number", () => {
+    expect(parseAcquisitionDate("2024-11-27")).toBe(20241127);
+    expect(parseAcquisitionDate("2026-07-26")).toBe(20260726);
+    expect(parseAcquisitionDate("2024-11-27 09:30:00")).toBe(20241127);
+  });
+
+  it("parses human-readable US month dates (mailroom format)", () => {
+    const nov = parseAcquisitionDate("Nov 27, 2024");
+    const jul = parseAcquisitionDate("July 26, 2026");
+    expect(nov).not.toBeNull();
+    expect(jul).not.toBeNull();
+    // July 2026 is after Nov 2024 regardless of string alphabetics.
+    expect(jul).toBeGreaterThan(nov);
+  });
+
+  it("returns null for empty, null and garbage values", () => {
+    expect(parseAcquisitionDate(null)).toBeNull();
+    expect(parseAcquisitionDate(undefined)).toBeNull();
+    expect(parseAcquisitionDate("")).toBeNull();
+    expect(parseAcquisitionDate("  ")).toBeNull();
+    expect(parseAcquisitionDate("not a date")).toBeNull();
   });
 });

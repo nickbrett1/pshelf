@@ -89,3 +89,28 @@ export function keepIfCancelPsPlus(games) {
     ownedByTitle: owned,
   };
 }
+
+/**
+ * Parse an acquisition/purchase date into a sortable number, or null when
+ * unparseable/empty.
+ *
+ * Mailroom stores acquisition dates as human-readable strings such as
+ * "Nov 27, 2024" or "July 26, 2026" — NOT ISO. String comparison on those is
+ * wrong ("Nov" > "July" alphabetically), which broke "Sort by Purchase Date".
+ * So we normalize to a comparable value:
+ *  - ISO "YYYY-MM-DD" (and "YYYY-MM-DD HH:MM" variants) → YYYYMMDD as a
+ *    number, which is timezone-independent and sorts correctly.
+ *  - Everything else (e.g. "Nov 27, 2024") → millisecond timestamp via
+ *    Date.parse, which understands US month-name dates.
+ * @param {string|null|undefined} value
+ * @returns {number|null}
+ */
+export function parseAcquisitionDate(value) {
+  if (value == null) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso) return Number(`${iso[1]}${iso[2]}${iso[3]}`);
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? null : t;
+}

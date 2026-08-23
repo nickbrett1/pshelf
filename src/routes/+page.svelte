@@ -5,6 +5,7 @@
     filterGames,
     keepIfCancelPsPlus,
     normalizePlatform,
+    parseAcquisitionDate,
   } from "$lib/catalog.js";
 
   let { data } = $props();
@@ -87,7 +88,11 @@
           return (b.rating ?? 0) - (a.rating ?? 0);
         case "purchased":
           // Most recent purchase first (descending); no date sorts last.
-          return (purchaseDate(b) ?? "").localeCompare(purchaseDate(a) ?? "");
+          // Dates are parsed to a sortable number (mailroom stores them as
+          // human-readable strings like "Nov 27, 2024", not ISO).
+          return (
+            (purchaseDate(b) ?? -Infinity) - (purchaseDate(a) ?? -Infinity)
+          );
         default:
           return 0;
       }
@@ -186,15 +191,16 @@
   // Latest acquisition/purchase date for a game, for the "Purchase Date" sort.
   // Prefers the most recent edition acquisition date (a game can have several
   // editions bought at different times), falling back to the game-level
-  // earliest_acquisition, then null. Dates are YYYY-MM-DD so string compare
-  // is correct. Null/missing sorts last.
+  // earliest_acquisition. Returns a sortable timestamp, or null when unknown
+  // (unknown sorts last). Mailroom dates are human-readable strings, so they
+  // must go through parseAcquisitionDate before comparing.
   function purchaseDate(game) {
-    const latest = (game.editions ?? [])
-      .map((ed) => ed.acquisition_date)
-      .filter(Boolean)
-      .sort()
-      .at(-1);
-    return latest ?? game.earliest_acquisition ?? null;
+    const dates = (game.editions ?? [])
+      .map((ed) => parseAcquisitionDate(ed.acquisition_date))
+      .filter((d) => d != null);
+    const earliest = parseAcquisitionDate(game.earliest_acquisition);
+    if (earliest != null) dates.push(earliest);
+    return dates.length ? Math.max(...dates) : null;
   }
 
   function resetFilters() {
