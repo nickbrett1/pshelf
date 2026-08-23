@@ -306,7 +306,12 @@
         >
           <GameCover {game} />
           <div class="card-body">
-            <h3 class="title">{@html highlight(game.title)}</h3>
+            <h3 class="title">
+              {@html highlight(game.title)}
+              {#if game.psvr2}
+                <span class="badge psvr2">PSVR2</span>
+              {/if}
+            </h3>
             <div class="meta">
               <span class="platform">
                 {(game.platforms ?? [])
@@ -566,6 +571,22 @@
     margin: 0;
     font-size: 1rem;
     line-height: 1.25;
+  }
+  /* PSVR2 badge on the card title — the game is a PSVR2 title (is_psvr2 from
+     catalog_games). Distinct cyan/blue so it's easy to spot at a glance. */
+  .title .badge.psvr2 {
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: #0e4b5e;
+    color: #7ee0ff;
+    border: 1px solid #1f7a96;
+    white-space: nowrap;
   }
   .meta {
     display: flex;
