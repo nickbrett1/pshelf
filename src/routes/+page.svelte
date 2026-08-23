@@ -300,7 +300,7 @@
       {#each visible as game (game.key)}
         <button
           type="button"
-          class:card
+          class="card"
           class:expanded={expanded.has(game.id)}
           onclick={() => toggleExpand(game.id)}
         >
