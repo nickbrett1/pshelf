@@ -12,7 +12,7 @@
 
 - pshelf:
     icon: sh-docker
-    href: http://nas:3005/
+    href: http://<hostname>:3005/
     description: pshelf container
     widget:
       type: customapi
