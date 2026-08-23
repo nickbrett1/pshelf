@@ -16,7 +16,7 @@ services:
     ports:
       - "127.0.0.1:3005:3000"
     volumes:
-      - /volume1/docker/mailroom/data:/data:ro
+      - \${DATA_DIR}:/data:ro
     environment:
       # Set your environment variables here or in a NAS-side .env file
       # (genproj never commits secrets). See .env.example.
@@ -26,6 +26,6 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
       - "homepage.group=Services"
       - "homepage.name=pshelf"
-      - "homepage.href=http://nas:3005/"
+      - "homepage.href=\${HOMEPAGE_URL}"
       - "homepage.widget.type=customapi"
       - "homepage.widget.url=http://localhost:3005/health"
