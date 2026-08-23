@@ -323,9 +323,9 @@
                 <span class="editions">{game.num_editions} editions</span>
               {/if}
             </div>
-            <span class="badge" class:owned={game.purchased}>
-              {game.purchased ? "Owned" : "On PS+"}
-            </span>
+            {#if !game.purchased}
+              <span class="badge lost">On PS+</span>
+            {/if}
             {#if game.genres.length}
               <p class="genres">{@html highlight(game.genres.join(", "))}</p>
             {/if}
@@ -596,18 +596,15 @@
     font-weight: 600;
   }
 
-  /* Owned vs on-PS+ indicator (Catalog Games Model: purchased = keep). */
-  .badge {
+  /* "On PS+" indicator — only shown when the game would be LOST if PS+ is
+     cancelled (not purchased). Owned games need no badge; they're the norm. */
+  .badge.lost {
     align-self: flex-start;
     font-size: 0.72rem;
     padding: 2px 8px;
     border-radius: 20px;
     background: #3a3142;
     color: #cbb8e0;
-  }
-  .badge.owned {
-    background: #1e3a2f;
-    color: #7ce8b0;
   }
 
   /* Multi-edition badge in the card meta. */
