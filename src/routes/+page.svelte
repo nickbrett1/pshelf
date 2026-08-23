@@ -85,6 +85,9 @@
           return a.title.localeCompare(b.title);
         case "rating":
           return (b.rating ?? 0) - (a.rating ?? 0);
+        case "purchased":
+          // Most recent purchase first (descending); no date sorts last.
+          return (purchaseDate(b) ?? "").localeCompare(purchaseDate(a) ?? "");
         default:
           return 0;
       }
@@ -178,6 +181,20 @@
     const n = Number(price);
     if (Number.isNaN(n)) return null;
     return `$${n.toFixed(2)}`;
+  }
+
+  // Latest acquisition/purchase date for a game, for the "Purchase Date" sort.
+  // Prefers the most recent edition acquisition date (a game can have several
+  // editions bought at different times), falling back to the game-level
+  // earliest_acquisition, then null. Dates are YYYY-MM-DD so string compare
+  // is correct. Null/missing sorts last.
+  function purchaseDate(game) {
+    const latest = (game.editions ?? [])
+      .map((ed) => ed.acquisition_date)
+      .filter(Boolean)
+      .sort()
+      .at(-1);
+    return latest ?? game.earliest_acquisition ?? null;
   }
 
   function resetFilters() {
@@ -288,6 +305,7 @@
         <select bind:value={sortBy} aria-label="Sort">
           <option value="title">Sort by Title</option>
           <option value="rating">Sort by Rating</option>
+          <option value="purchased">Sort by Purchase Date</option>
         </select>
 
         <button class="reset" onclick={resetFilters}>Reset</button>
