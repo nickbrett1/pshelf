@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { loadCatalog, mapRow } from "../src/lib/server/catalog-store.js";
+import {
+  loadCatalog,
+  mapRow,
+  dedupeGames,
+} from "../src/lib/server/catalog-store.js";
 
 const ORIGINAL_PATH = process.env.CATALOG_DB_PATH;
 
@@ -236,5 +240,69 @@ describe("mapRow", () => {
     expect(mapped.ownership_classes).toEqual([]);
     expect(mapped.genres).toEqual([]);
     expect(mapped.id).toBeNull();
+  });
+});
+
+describe("dedupeGames", () => {
+  it("keeps one card per logical game when the view emits duplicate rows", () => {
+    // Mirrors the mailroom join artifact: same game (game_id + igdb_id)
+    // emitted twice. The duplicate row must not render as a second card.
+    const games = [
+      {
+        id: 1968,
+        title: "Rayman Legends",
+        igdb_id: 1968,
+        platforms: ["PS4"],
+        purchased: true,
+      },
+      {
+        id: 1968,
+        title: "Rayman Legends",
+        igdb_id: 1968,
+        platforms: ["PS4"],
+        purchased: true,
+      },
+      {
+        id: 5,
+        title: "Bloodborne",
+        igdb_id: 7334,
+        platforms: ["PS4"],
+        purchased: true,
+      },
+    ];
+    const deduped = dedupeGames(games);
+    expect(deduped).toHaveLength(2);
+    expect(deduped.map((g) => g.title)).toEqual([
+      "Rayman Legends",
+      "Bloodborne",
+    ]);
+  });
+
+  it("dedupes by igdb_id when game_id is missing", () => {
+    const games = [
+      { id: null, title: "Returnal", igdb_id: 123, platforms: ["PS5"] },
+      { id: null, title: "Returnal", igdb_id: 123, platforms: ["PS5"] },
+    ];
+    expect(dedupeGames(games)).toHaveLength(1);
+  });
+
+  it("falls back to title when there is no id or igdb_id", () => {
+    const untitled = "Untitled";
+    const games = [
+      { id: null, title: untitled },
+      { id: null, title: untitled },
+      { id: null, title: "Other" },
+    ];
+    const deduped = dedupeGames(games);
+    expect(deduped).toHaveLength(2);
+    expect(deduped.map((g) => g.title)).toEqual([untitled, "Other"]);
+  });
+
+  it("keeps distinct games that share neither id nor title", () => {
+    const games = [
+      { id: 1, title: "A", igdb_id: 10 },
+      { id: 2, title: "B", igdb_id: 20 },
+    ];
+    expect(dedupeGames(games)).toHaveLength(2);
   });
 });

@@ -114,6 +114,35 @@ function parseEditions(value) {
   return [];
 }
 
+/**
+ * Deduplicate a list of mapped games so each *logical* game renders once.
+ *
+ * The shared mailroom `catalog_games` view is (by design) one row per logical
+ * game, but its backing join can occasionally emit two rows for the same game
+ * (a display artifact — e.g. Rayman Legends appearing twice though it's a
+ * single entry, igdb 1968). Pshelf renders one card per row, so those phantom
+ * duplicates would show up as two identical cards. Collapse them here by the
+ * game's logical identity, keeping the first (richest) row.
+ *
+ * Identity precedence: the catalog `game_id` when present (most specific),
+ * else the IGDB id, else the title. Legacy rows carry `owned_game_id`, which
+ * maps to `id` too, so they dedupe the same way.
+ * @param {Array<Object>} games
+ * @returns {Array<Object>}
+ */
+export function dedupeGames(games) {
+  const seen = new Set();
+  const out = [];
+  for (const g of games) {
+    const key =
+      g.id ?? (g.igdb_id ? `igdb:${g.igdb_id}` : null) ?? `title:${g.title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(g);
+  }
+  return out;
+}
+
 /** True if a view/table of the given name exists in the DB. */
 function hasRelation(db, name) {
   const row = db
@@ -142,11 +171,11 @@ export function loadCatalog() {
       : "catalog_views";
     const rows = db.prepare(`SELECT * FROM ${relation}`).all();
     db.close();
-    const games = rows.map(mapRow);
-    // Svelte 5's keyed {#each} throws on duplicate keys (each_key_duplicate).
-    // Many rows have no usable id and titles repeat, so the natural key
-    // (game.id ?? game.title) collides and breaks hydration of the grid.
-    // Give every row a unique, stable key computed once at load time.
+    // Collapse phantom duplicates the catalog view may emit for one logical
+    // game (see dedupeGames), then give every row a unique, stable key.
+    // Svelte 5's keyed {#each} throws on duplicate keys (each_key_duplicate)
+    // and many rows have no usable id, so the key is index-suffixed.
+    const games = dedupeGames(rows.map(mapRow));
     return games.map((g, i) => ({ ...g, key: `${g.id ?? g.title}__${i}` }));
   } catch (err) {
     console.error(
