@@ -16,16 +16,16 @@ services:
     ports:
       - "127.0.0.1:3005:3000"
     volumes:
-      - \${DATA_DIR}:/data:ro
+      - ${DATA_DIR}:/data:ro
     environment:
       # Set your environment variables here or in a NAS-side .env file
       # (genproj never commits secrets). See .env.example.
-      MANUAL_API_URL: ${MANUAL_API_URL:-http://nas:3004}
-      IGDB_API_URL: ${IGDB_API_URL:-http://nas:8765}
+      MANUAL_API_URL: ${MANUAL_API_URL}
+      IGDB_API_URL: ${IGDB_API_URL}
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "homepage.group=Services"
       - "homepage.name=pshelf"
-      - "homepage.href=\${HOMEPAGE_URL}"
+      - "homepage.href=${HOMEPAGE_URL}"
       - "homepage.widget.type=customapi"
       - "homepage.widget.url=http://localhost:3005/health"
