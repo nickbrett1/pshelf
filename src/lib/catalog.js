@@ -114,3 +114,50 @@ export function parseAcquisitionDate(value) {
   const t = Date.parse(s);
   return Number.isNaN(t) ? null : t;
 }
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/** Format y/m/d as a consistent long-form date, e.g. "November 27, 2024". */
+function formatYmd(year, month, day) {
+  return `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
+}
+
+/**
+ * Normalize an acquisition/purchase date to a single consistent display
+ * format: "Month D, YYYY" (e.g. "November 27, 2024"). Mailroom's stored
+ * values are inconsistent — sometimes ISO/MM-DD-YYYY, sometimes written out
+ * like "Wednesday, November 27, 2024". We collapse all of them to the long
+ * form with the day of the week dropped (it isn't useful).
+ * Returns null when the value is empty or unparseable (caller hides it).
+ * @param {string|null|undefined} value
+ * @returns {string|null}
+ */
+export function formatAcquisitionDate(value) {
+  if (value == null) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  // ISO "YYYY-MM-DD" (optionally with a time): read the components directly so
+  // a UTC-parsed date can't shift a day under a local timezone.
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (iso) return formatYmd(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  // Human-readable / anything else (e.g. "Nov 27, 2024",
+  // "Wednesday, November 27, 2024"): Date.parse treats a date-only string as
+  // local midnight, so reading local parts reproduces the original date.
+  const t = Date.parse(s);
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  return formatYmd(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}

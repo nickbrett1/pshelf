@@ -3,6 +3,7 @@
   import GameCover from "$lib/GameCover.svelte";
   import {
     filterGames,
+    formatAcquisitionDate,
     keepIfCancelPsPlus,
     normalizePlatform,
     parseAcquisitionDate,
@@ -386,9 +387,9 @@
                   {#if formatPrice(ed.price)}
                     <span class="ed-price">{formatPrice(ed.price)}</span>
                   {/if}
-                  {#if ed.acquisition_date}
-                    <span class="ed-date">{ed.acquisition_date}</span>
-                  {/if}
+                  <span class="ed-date">
+                    {formatAcquisitionDate(ed.acquisition_date) ?? "Unknown"}
+                  </span>
                 </div>
               {/each}
             </div>

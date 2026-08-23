@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   filterGames,
+  formatAcquisitionDate,
   keepIfCancelPsPlus,
   normalizePlatform,
   parseAcquisitionDate,
@@ -154,5 +155,34 @@ describe("parseAcquisitionDate", () => {
     expect(parseAcquisitionDate("")).toBeNull();
     expect(parseAcquisitionDate("  ")).toBeNull();
     expect(parseAcquisitionDate("not a date")).toBeNull();
+  });
+});
+
+describe("formatAcquisitionDate", () => {
+  it("formats ISO dates as Month D, YYYY", () => {
+    expect(formatAcquisitionDate("2024-11-27")).toBe("November 27, 2024");
+    expect(formatAcquisitionDate("2024-11-27 09:30:00")).toBe(
+      "November 27, 2024",
+    );
+    expect(formatAcquisitionDate("2026-07-26")).toBe("July 26, 2026");
+  });
+
+  it("formats written-out dates, dropping the day of the week", () => {
+    expect(formatAcquisitionDate("Wednesday, November 27, 2024")).toBe(
+      "November 27, 2024",
+    );
+    expect(formatAcquisitionDate("Nov 27, 2024")).toBe("November 27, 2024");
+    expect(formatAcquisitionDate("July 26, 2026")).toBe("July 26, 2026");
+  });
+
+  it("formats MM/DD/YYYY dates", () => {
+    expect(formatAcquisitionDate("11/27/2024")).toBe("November 27, 2024");
+  });
+
+  it("returns null for empty and unparseable values", () => {
+    expect(formatAcquisitionDate(null)).toBeNull();
+    expect(formatAcquisitionDate(undefined)).toBeNull();
+    expect(formatAcquisitionDate("")).toBeNull();
+    expect(formatAcquisitionDate("not a date")).toBeNull();
   });
 });
