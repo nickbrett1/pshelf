@@ -394,6 +394,9 @@
               {/each}
             </div>
           {/if}
+          {#if expanded.has(game.id) && game.igdb_id != null}
+            <span class="igdb-id">IGDB {game.igdb_id}</span>
+          {/if}
         </button>
       {/each}
     </section>
@@ -703,5 +706,17 @@
   }
   .ed-date {
     color: #6b7488;
+  }
+
+  /* Discreet IGDB id, shown bottom-right of an expanded card — a debug aid
+     (e.g. for the mailroom game-splitting bug) without cluttering the grid. */
+  .igdb-id {
+    margin-left: auto;
+    margin-top: auto;
+    padding: 3px 10px 6px;
+    font-size: 0.62rem;
+    color: #4a5268;
+    letter-spacing: 0.04em;
+    user-select: all;
   }
 </style>
