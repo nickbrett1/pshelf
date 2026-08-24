@@ -14,10 +14,9 @@
 // If the DB is not present (e.g. local dev) the store returns an empty list so
 // the UI still renders a friendly empty state.
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-
 const require = createRequire(import.meta.url);
 
 const DEFAULT_DB_CANDIDATES = ["catalog.db", "mailroom.db", "mailroom.db-wal"];
@@ -182,6 +181,49 @@ export function loadCatalog() {
       `[pshelf] failed to read catalog from ${dbPath}:`,
       err.message,
     );
+    return [];
+  }
+}
+
+/** stat a path to {size, mtimeMs} or null when missing/unreadable. */
+function statIfExists(p) {
+  if (!p || !existsSync(p)) return null;
+  try {
+    const s = statSync(p);
+    return { size: s.size, mtime: s.mtime.toISOString() };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Describe where Pshelf is currently reading its catalog from — for
+ * diagnosing "the UI shows stale rows" issues (e.g. Pshelf pointing at a
+ * different DB copy than mailroom writes, or an un-checkpointed WAL).
+ * Returns the configured path, the resolved DB file (plus its size/mtime) and
+ * whether a -wal file is present, plus what's in the data dir.
+ * @returns {Object}
+ */
+export function catalogSourceInfo() {
+  const dataDir = process.env.CATALOG_DB_PATH ?? "/data";
+  const dbPath = resolveDbPath();
+  return {
+    configured: process.env.CATALOG_DB_PATH ?? null,
+    dataDir,
+    resolvedDb: dbPath,
+    dbFile: statIfExists(dbPath),
+    walFile: statIfExists(dbPath ? `${dbPath}-wal` : null),
+    // What's actually on the mount, so we can see if the DB Pshelf finds is
+    // the same one mailroom updates.
+    dataDirContents: readdirSafe(dataDir),
+  };
+}
+
+/** readdir that returns [] on error (dir missing/unreadable). */
+function readdirSafe(dir) {
+  try {
+    return readdirSync(dir).sort();
+  } catch {
     return [];
   }
 }

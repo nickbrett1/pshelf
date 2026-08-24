@@ -7,6 +7,7 @@ import {
   loadCatalog,
   mapRow,
   dedupeGames,
+  catalogSourceInfo,
 } from "../src/lib/server/catalog-store.js";
 
 const ORIGINAL_PATH = process.env.CATALOG_DB_PATH;
@@ -108,6 +109,25 @@ describe("loadCatalog", () => {
   it("returns [] when the DB file does not exist", () => {
     process.env.CATALOG_DB_PATH = path.join(dir, "missing.db");
     expect(loadCatalog()).toEqual([]);
+  });
+});
+
+describe("catalogSourceInfo", () => {
+  it("reports the resolved DB path and file metadata", () => {
+    seedGamesDb();
+    const info = catalogSourceInfo();
+    expect(info.configured).toBe(dbPath);
+    expect(info.resolvedDb).toBe(dbPath);
+    expect(info.dbFile).not.toBeNull();
+    expect(info.dbFile.size).toBeGreaterThan(0);
+    expect(typeof info.dbFile.mtime).toBe("string");
+  });
+
+  it("reports null dbFile when the DB does not exist", () => {
+    process.env.CATALOG_DB_PATH = path.join(dir, "missing.db");
+    const info = catalogSourceInfo();
+    expect(info.resolvedDb).toBeNull();
+    expect(info.dbFile).toBeNull();
   });
 });
 
