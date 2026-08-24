@@ -11,6 +11,7 @@
   let actionMsg = $state("");
   let actionError = $state("");
   let showExclude = $state(false);
+  let selectedId = $state(null);
 
   async function doSearch() {
     const q = query.trim();
@@ -33,18 +34,9 @@
   }
 
   function pick(c) {
-    // Store the selected candidate so the match form submits it.
-    const input = document.querySelector(
-      `input[name="igdb_id"][data-row="${game.id}"]`,
-    );
-    if (input) input.value = c.igdb_id;
-    // Highlight the picked candidate.
-    document.querySelectorAll(`[data-cand="${game.id}"]`).forEach((el) => {
-      el.classList.toggle(
-        "selected",
-        Number(el.dataset.cand) === Number(c.igdb_id),
-      );
-    });
+    // Store the selected candidate so the match form submits it and the
+    // candidate list highlights it (reactive via `selectedId`).
+    selectedId = c.igdb_id;
   }
 
   function onMatch({ result }) {
@@ -92,11 +84,12 @@
 
   {#if candidates.length}
     <ul class="candidates">
-      {#each candidates as c}
-        <li data-cand={c.igdb_id} data-row-holder>
+      {#each candidates as c (c.igdb_id)}
+        <li data-cand={c.igdb_id}>
           <button
             type="button"
             class="cand"
+            class:selected={selectedId === c.igdb_id}
             onclick={() => pick(c)}
             data-cand={c.igdb_id}
           >
@@ -108,11 +101,19 @@
     </ul>
   {/if}
 
-  <form method="POST" action="?/match" use:enhance={onMatch}>
+  <form
+    method="POST"
+    action="?/match"
+    use:enhance={() =>
+      ({ result, update }) => {
+        onMatch({ result });
+        update();
+      }}
+  >
     <input type="hidden" name="owned_game_id" value={game.id} />
-    <input type="hidden" name="igdb_id" value="" data-row={game.id} />
+    <input type="hidden" name="igdb_id" value={selectedId ?? ""} />
     <input type="hidden" name="note" value="matched via pshelf UI" />
-    <button type="submit" disabled={!candidates.length}>Match</button>
+    <button type="submit" disabled={selectedId == null}>Match</button>
   </form>
 
   <button
@@ -123,7 +124,15 @@
     Not a game (demo/OST/artbook)? Exclude…
   </button>
   {#if showExclude}
-    <form method="POST" action="?/exclude" use:enhance={onExclude}>
+    <form
+      method="POST"
+      action="?/exclude"
+      use:enhance={() =>
+        ({ result, update }) => {
+          onExclude({ result });
+          update();
+        }}
+    >
       <input type="hidden" name="owned_game_id" value={game.id} />
       <input
         type="text"
