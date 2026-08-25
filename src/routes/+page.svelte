@@ -18,7 +18,7 @@
   let formatFilter = $state("all");
   let classFilter = $state("all");
   let genreFilter = $state("all");
-  let sortBy = $state("title");
+  let sortBy = $state("purchased");
 
   let debounceTimer;
   function onSearchInput() {
@@ -211,7 +211,7 @@
     formatFilter = "all";
     classFilter = "all";
     genreFilter = "all";
-    sortBy = "title";
+    sortBy = "purchased";
   }
 </script>
 
