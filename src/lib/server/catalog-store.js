@@ -258,3 +258,17 @@ function readdirSafe(dir) {
     return [];
   }
 }
+
+/**
+ * Look up a single game (with its full `editions`) by id from the cached
+ * catalog. Used by the lazy-load editions endpoint; returns the cached mapped
+ * row or null. See loadCatalog — the result is cached, so this is cheap.
+ * @param {number|string|null|undefined} id
+ * @returns {Object|null}
+ */
+export function getGameById(id) {
+  if (id == null) return null;
+  const games = loadCatalog();
+  const key = String(id);
+  return games.find((g) => g.id != null && String(g.id) === key) ?? null;
+}

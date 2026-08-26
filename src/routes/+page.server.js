@@ -1,5 +1,6 @@
 import { loadCatalog } from "$lib/server/catalog-store.js";
 import { getNeedsMatch, getPsnCredential } from "$lib/server/api-client.js";
+import { parseAcquisitionDate } from "$lib/catalog.js";
 
 // The two manual-API calls below only decide whether to show the "Fix IGDB"
 // and "Stale PSN Token" nav links. Mailroom's /manual/needs-match call can be
@@ -31,12 +32,30 @@ async function getNavMetrics() {
 }
 
 /**
- * Project a catalog game onto only the fields the catalog UI actually reads.
- * mapRow() (in catalog-store.js) returns the full mapping, but three fields —
- * game-level `year`, top-level `price`, and `provenance` — are never rendered
- * client-side. Stripping them shrinks the ~832 KB serialized payload (a bit;
- * gzip already crunches the repetitive small tokens). Editions are kept — they
- * ARE used, on card expand. See memo "Pshelf slow to load".
+ * Latest acquisition/purchase date for a game, as a sortable number (null when
+ * unknown). Mirrors the old client-side `purchaseDate()` logic so the "Sort by
+ * Purchase Date" order is unchanged — but computed on the server so the client
+ * doesn't need every game's `editions` array just to sort.
+ * @param {Object} g full mapped catalog row
+ * @returns {number|null}
+ */
+function maxAcquisitionDate(g) {
+  const dates = (g.editions ?? [])
+    .map((e) => parseAcquisitionDate(e.acquisition_date))
+    .filter((d) => d != null);
+  const earliest = parseAcquisitionDate(g.earliest_acquisition);
+  if (earliest != null) dates.push(earliest);
+  return dates.length ? Math.max(...dates) : null;
+}
+
+/**
+ * Project a catalog game onto only the fields the catalog UI needs up front.
+ * The per-game `editions` arrays (the largest slice of the old payload) are
+ * deliberately NOT shipped here — they're only shown when a card is expanded,
+ * so they're lazy-loaded on demand via /api/game/[id]/editions. We ship a
+ * precomputed `purchase_date` sort key instead so "Sort by Purchase Date"
+ * keeps working. Other unused fields (`year`, top-level `price`, `provenance`)
+ * are dropped too. See memo "Pshelf slow to load".
  * @param {Object} g mapped catalog row (see mapRow)
  * @returns {Object} slimmed row for transport
  */
@@ -55,9 +74,8 @@ function slimGame(g) {
     rating: g.rating,
     num_editions: g.num_editions,
     purchased: g.purchased,
-    earliest_acquisition: g.earliest_acquisition,
     igdb_id: g.igdb_id,
-    editions: g.editions,
+    purchase_date: maxAcquisitionDate(g),
   };
 }
 

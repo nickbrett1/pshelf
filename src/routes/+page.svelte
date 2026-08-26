@@ -6,7 +6,6 @@
     formatAcquisitionDate,
     keepIfCancelPsPlus,
     normalizePlatform,
-    parseAcquisitionDate,
   } from "$lib/catalog.js";
 
   let { data } = $props();
@@ -89,10 +88,10 @@
           return (b.rating ?? 0) - (a.rating ?? 0);
         case "purchased":
           // Most recent purchase first (descending); no date sorts last.
-          // Dates are parsed to a sortable number (mailroom stores them as
-          // human-readable strings like "Nov 27, 2024", not ISO).
+          // purchase_date is precomputed server-side (the client no longer
+          // receives every game's editions, which the old date sort depended on).
           return (
-            (purchaseDate(b) ?? -Infinity) - (purchaseDate(a) ?? -Infinity)
+            (b.purchase_date ?? -Infinity) - (a.purchase_date ?? -Infinity)
           );
         default:
           return 0;
@@ -170,14 +169,45 @@
   }
 
   // Expanded multi-edition detail (Catalog Games Model): toggles a game's
-  // editions list on the card.
+  // editions list on the card. Editions are no longer shipped for every game
+  // (that was the largest slice of the page payload) — they're lazy-loaded on
+  // expand from /api/game/[id]/editions and cached per game for the session.
   let expanded = $state(new Set());
+  /** @type {Map<string, { loading: boolean, editions: Array, error: string|null }>} */
+  let editionsByGame = $state(new Map());
+  /** @type {Map<string, Promise<void>>} */
+  const editionsRequests = new Map();
+
+  async function loadEditions(id) {
+    if (editionsRequests.has(id)) return editionsRequests.get(id);
+    editionsByGame.set(id, { loading: true, editions: [], error: null });
+    const p = fetch(`/api/game/${id}/editions`)
+      .then((r) => r.json())
+      .then((d) => {
+        editionsByGame.set(id, {
+          loading: false,
+          editions: Array.isArray(d?.editions) ? d.editions : [],
+          error: null,
+        });
+      })
+      .catch((e) => {
+        editionsByGame.set(id, {
+          loading: false,
+          editions: [],
+          error: e.message ?? "Failed to load editions",
+        });
+      });
+    editionsRequests.set(id, p);
+    return p;
+  }
+
   function toggleExpand(id) {
     const next = new Set(expanded);
     if (next.has(id)) {
       next.delete(id);
     } else {
       next.add(id);
+      void loadEditions(id);
     }
     expanded = next;
   }
@@ -187,21 +217,6 @@
     const n = Number(price);
     if (Number.isNaN(n)) return null;
     return `$${n.toFixed(2)}`;
-  }
-
-  // Latest acquisition/purchase date for a game, for the "Purchase Date" sort.
-  // Prefers the most recent edition acquisition date (a game can have several
-  // editions bought at different times), falling back to the game-level
-  // earliest_acquisition. Returns a sortable timestamp, or null when unknown
-  // (unknown sorts last). Mailroom dates are human-readable strings, so they
-  // must go through parseAcquisitionDate before comparing.
-  function purchaseDate(game) {
-    const dates = (game.editions ?? [])
-      .map((ed) => parseAcquisitionDate(ed.acquisition_date))
-      .filter((d) => d != null);
-    const earliest = parseAcquisitionDate(game.earliest_acquisition);
-    if (earliest != null) dates.push(earliest);
-    return dates.length ? Math.max(...dates) : null;
   }
 
   function resetFilters() {
@@ -372,32 +387,42 @@
               <p class="rating">★ {game.rating.toFixed(1)}</p>
             {/if}
           </div>
-          {#if expanded.has(game.id) && game.editions.length}
+          {#if expanded.has(game.id) && (game.num_editions ?? 1) > 0}
+            {@const ed = editionsByGame.get(game.id)}
             <div class="editions-panel">
               <h4>Editions</h4>
-              {#each game.editions as ed (ed.id ?? ed.title ?? ed)}
-                <div class="edition">
-                  <span class="ed-title">{ed.title ?? game.title}</span>
-                  <span class="ed-meta">
-                    {#if ed.platform}
-                      {normalizePlatform(ed.platform)}
+              {#if ed?.loading}
+                <p class="editions-muted">Loading…</p>
+              {:else if ed?.error}
+                <p class="editions-error">{ed.error}</p>
+              {:else if ed?.editions.length}
+                {#each ed.editions as edRow (edRow.id ?? edRow.title ?? edRow)}
+                  <div class="edition">
+                    <span class="ed-title">{edRow.title ?? game.title}</span>
+                    <span class="ed-meta">
+                      {#if edRow.platform}
+                        {normalizePlatform(edRow.platform)}
+                      {/if}
+                      {#if edRow.format}{formatLabel(edRow.format)}{/if}
+                    </span>
+                    <span
+                      class="ed-class"
+                      class:owned={edRow.ownership_class === "purchased"}
+                    >
+                      {formatClass(edRow.ownership_class)}
+                    </span>
+                    {#if formatPrice(edRow.price)}
+                      <span class="ed-price">{formatPrice(edRow.price)}</span>
                     {/if}
-                    {#if ed.format}{formatLabel(ed.format)}{/if}
-                  </span>
-                  <span
-                    class="ed-class"
-                    class:owned={ed.ownership_class === "purchased"}
-                  >
-                    {formatClass(ed.ownership_class)}
-                  </span>
-                  {#if formatPrice(ed.price)}
-                    <span class="ed-price">{formatPrice(ed.price)}</span>
-                  {/if}
-                  <span class="ed-date">
-                    {formatAcquisitionDate(ed.acquisition_date) ?? "Unknown"}
-                  </span>
-                </div>
-              {/each}
+                    <span class="ed-date">
+                      {formatAcquisitionDate(edRow.acquisition_date) ??
+                        "Unknown"}
+                    </span>
+                  </div>
+                {/each}
+              {:else}
+                <p class="editions-muted">No editions</p>
+              {/if}
             </div>
           {/if}
           {#if expanded.has(game.id) && game.igdb_id != null}
@@ -688,6 +713,16 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: #7c85a0;
+  }
+  .editions-muted {
+    margin: 0;
+    color: #6b7488;
+    font-size: 0.8rem;
+  }
+  .editions-error {
+    margin: 0;
+    color: #ff8a8a;
+    font-size: 0.8rem;
   }
   .edition {
     display: flex;
