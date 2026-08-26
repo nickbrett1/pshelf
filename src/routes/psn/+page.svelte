@@ -24,7 +24,13 @@
   function fmt(ts) {
     if (!ts) return "—";
     const d = new Date(ts);
-    return Number.isNaN(d.getTime()) ? ts : d.toLocaleString();
+    if (Number.isNaN(d.getTime())) return ts;
+    const date = d.toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+    });
+    const time = d.toLocaleTimeString();
+    return `${date}, ${time}`;
   }
 </script>
 
@@ -40,7 +46,6 @@
         Status of the PSN access used by mailroom's catalog sync.
       </p>
     </div>
-    <nav><a href="/">← Catalog</a></nav>
   </header>
 
   <section class="card">
@@ -130,10 +135,6 @@
   .sub {
     margin: 0;
     color: #9aa3b5;
-  }
-  nav a {
-    color: #e94560;
-    text-decoration: none;
   }
   .card {
     background: #161a24;
