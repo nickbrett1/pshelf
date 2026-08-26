@@ -153,14 +153,41 @@ function hasRelation(db, name) {
 }
 
 /**
+ * In-process cache for the mapped catalog.
+ *
+ * The catalog is read-mostly and changes only when mailroom syncs to the
+ * shared /data mount, so the full-table scan + mapping (the root cause of the
+ * slow homepage — see memo "Pshelf slow to load") need not run on every page
+ * load. We cache the mapped result in memory and refresh it only when the DB
+ * file's size or mtime changes, which is the moment mailroom actually wrote a
+ * new catalog. This keeps a hot catalog for long stretches (DB rarely updates)
+ * while guaranteeing the UI never serves stale data past a sync.
+ */
+let catalogCache = null;
+
+/**
  * Load all games from catalog_games (read-only), falling back to the legacy
  * catalog_views view when the game-centric view isn't present yet. Returns []
- * if the DB is unavailable.
+ * if the DB is unavailable. Results are cached in memory and re-read only
+ * when the DB file's size/mtime changes.
  * @returns {Array<Object>}
  */
 export function loadCatalog() {
   const dbPath = resolveDbPath();
-  if (!dbPath) return [];
+  if (!dbPath) {
+    // No DB present (e.g. local dev) — drop any stale cache and render empty.
+    catalogCache = null;
+    return [];
+  }
+
+  // Cheap stat on every call; only the *scan* is cached.
+  const stat = statIfExists(dbPath);
+  const statKey = stat ? `${stat.size}:${stat.mtime}` : null;
+
+  // Fast path: DB unchanged since last load, serve the cached catalog.
+  if (catalogCache && catalogCache.statKey === statKey) {
+    return catalogCache.games;
+  }
 
   try {
     const { DatabaseSync } = require("node:sqlite");
@@ -174,8 +201,12 @@ export function loadCatalog() {
     // game (see dedupeGames), then give every row a unique, stable key.
     // Svelte 5's keyed {#each} throws on duplicate keys (each_key_duplicate)
     // and many rows have no usable id, so the key is index-suffixed.
-    const games = dedupeGames(rows.map(mapRow));
-    return games.map((g, i) => ({ ...g, key: `${g.id ?? g.title}__${i}` }));
+    const games = dedupeGames(rows.map(mapRow)).map((g, i) => ({
+      ...g,
+      key: `${g.id ?? g.title}__${i}`,
+    }));
+    catalogCache = { games, statKey };
+    return games;
   } catch (err) {
     console.error(
       `[pshelf] failed to read catalog from ${dbPath}:`,
