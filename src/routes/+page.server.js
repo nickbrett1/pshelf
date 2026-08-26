@@ -31,8 +31,14 @@ async function getNavMetrics() {
 }
 
 /** @type {import('./$types').PageServerLoad} */
-export async function load() {
+export function load() {
   const games = loadCatalog();
-  const { needsMatchCount, psnNeedsRefresh } = await getNavMetrics();
-  return { games, needsMatchCount, psnNeedsRefresh };
+  return {
+    games,
+    // getNavMetrics hits mailroom's manual API and can take ~1s. Return it as
+    // an un-awaited promise so SvelteKit 2 streams it: the catalog renders
+    // immediately from the (cached) store and the nav links pop in when the
+    // counts resolve. getNavMetrics never rejects (its fetches swallow errors).
+    nav: getNavMetrics(),
+  };
 }

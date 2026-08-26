@@ -246,12 +246,18 @@
         </div>
       </div>
       <nav>
-        {#if data.needsMatchCount > 0}
-          <a href="/fix">Fix IGDB ({data.needsMatchCount})</a>
-        {/if}
-        {#if data.psnNeedsRefresh}
-          <a href="/psn">Stale PSN Token</a>
-        {/if}
+        {#await data.nav}
+          <span class="nav-pending" aria-hidden="true"></span>
+        {:then nav}
+          {#if nav.needsMatchCount > 0}
+            <a href="/fix">Fix IGDB ({nav.needsMatchCount})</a>
+          {/if}
+          {#if nav.psnNeedsRefresh}
+            <a href="/psn">Stale PSN Token</a>
+          {/if}
+        {:catch}
+          <!-- counts unavailable; no nav links -->
+        {/await}
       </nav>
     </div>
   </header>
@@ -492,6 +498,13 @@
   }
   nav a:hover {
     text-decoration: underline;
+  }
+  /* Reserve nav height while the streamed link counts are loading so the
+     header doesn't shift once they arrive. */
+  .nav-pending {
+    display: inline-block;
+    min-width: 20px;
+    min-height: 18px;
   }
 
   .empty {
