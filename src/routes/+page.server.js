@@ -30,9 +30,40 @@ async function getNavMetrics() {
   return navCache;
 }
 
+/**
+ * Project a catalog game onto only the fields the catalog UI actually reads.
+ * mapRow() (in catalog-store.js) returns the full mapping, but three fields —
+ * game-level `year`, top-level `price`, and `provenance` — are never rendered
+ * client-side. Stripping them shrinks the ~832 KB serialized payload (a bit;
+ * gzip already crunches the repetitive small tokens). Editions are kept — they
+ * ARE used, on card expand. See memo "Pshelf slow to load".
+ * @param {Object} g mapped catalog row (see mapRow)
+ * @returns {Object} slimmed row for transport
+ */
+function slimGame(g) {
+  return {
+    id: g.id,
+    key: g.key,
+    title: g.title,
+    cover: g.cover,
+    psvr2: g.psvr2,
+    platforms: g.platforms,
+    formats: g.formats,
+    ownership_classes: g.ownership_classes,
+    genres: g.genres,
+    retailer: g.retailer,
+    rating: g.rating,
+    num_editions: g.num_editions,
+    purchased: g.purchased,
+    earliest_acquisition: g.earliest_acquisition,
+    igdb_id: g.igdb_id,
+    editions: g.editions,
+  };
+}
+
 /** @type {import('./$types').PageServerLoad} */
 export function load() {
-  const games = loadCatalog();
+  const games = loadCatalog().map(slimGame);
   return {
     games,
     // getNavMetrics hits mailroom's manual API and can take ~1s. Return it as
