@@ -1,4 +1,4 @@
-import { fail, redirect } from "@sveltejs/kit";
+import { fail } from "@sveltejs/kit";
 import {
   getPsnCredential,
   submitPsnCredential,
@@ -18,6 +18,9 @@ export const actions = {
     const result = await submitPsnCredential(npsso);
     if (!result.ok)
       return fail(502, { error: result.error ?? "refresh failed" });
-    redirect(303, "/psn");
+    // Return success in place (no self-redirect) so `use:enhance` doesn't push
+    // a duplicate /psn history entry — which made the browser Back button
+    // appear broken (it just went back to the same page).
+    return { ok: true };
   },
 };

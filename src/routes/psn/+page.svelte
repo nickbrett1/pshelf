@@ -1,5 +1,6 @@
 <script>
   import { enhance } from "$app/forms";
+  import { invalidateAll } from "$app/navigation";
 
   let { data } = $props();
 
@@ -11,13 +12,17 @@
   let error = $state("");
   let success = $state("");
 
-  function onSubmit({ result }) {
+  async function onSubmit({ result }) {
     if (result.type === "failure") {
       error = result.data?.error ?? "Refresh failed.";
       success = "";
     } else {
       success = "Credential refreshed ✓";
       error = "";
+      // Re-run the page load in place so Last success/Last error/Expires and
+      // the status badge update without a redirect (which would add a
+      // duplicate /psn history entry and break the Back button).
+      await invalidateAll();
     }
   }
 
