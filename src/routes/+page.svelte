@@ -171,31 +171,27 @@
   // Expanded multi-edition detail (Catalog Games Model): toggles a game's
   // editions list on the card. Editions are no longer shipped for every game
   // (that was the largest slice of the page payload) — they're lazy-loaded on
-  // expand from /api/game/[id]/editions and cached per game for the session.
+  // expand from /api/game/[id]/editions. The panel uses {#await} on the
+  // loadEditions promise, which handles the loading/resolved states natively
+  // (avoids the "stuck on Loading…" bug from a non-reactivity Map read).
+  // In-flight results are cached per game so re-expanding is instant.
   let expanded = $state(new Set());
-  /** @type {Map<string, { loading: boolean, editions: Array, error: string|null }>} */
-  let editionsByGame = $state(new Map());
-  /** @type {Map<string, Promise<void>>} */
+  /** @type {Map<string, Promise<Array>>} */
   const editionsRequests = new Map();
 
-  async function loadEditions(id) {
+  /** @returns {Promise<Array>} resolves to the game's editions (or []) */
+  function loadEditions(id) {
     if (editionsRequests.has(id)) return editionsRequests.get(id);
-    editionsByGame.set(id, { loading: true, editions: [], error: null });
     const p = fetch(`/api/game/${id}/editions`)
-      .then((r) => r.json())
-      .then((d) => {
-        editionsByGame.set(id, {
-          loading: false,
-          editions: Array.isArray(d?.editions) ? d.editions : [],
-          error: null,
-        });
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
       })
+      .then((d) => (Array.isArray(d?.editions) ? d.editions : []))
       .catch((e) => {
-        editionsByGame.set(id, {
-          loading: false,
-          editions: [],
-          error: e.message ?? "Failed to load editions",
-        });
+        // Allow a retry on next expand by dropping the failed promise.
+        editionsRequests.delete(id);
+        throw e;
       });
     editionsRequests.set(id, p);
     return p;
@@ -207,7 +203,6 @@
       next.delete(id);
     } else {
       next.add(id);
-      void loadEditions(id);
     }
     expanded = next;
   }
@@ -388,41 +383,42 @@
             {/if}
           </div>
           {#if expanded.has(game.id) && (game.num_editions ?? 1) > 0}
-            {@const ed = editionsByGame.get(game.id)}
             <div class="editions-panel">
               <h4>Editions</h4>
-              {#if ed?.loading}
+              {#await loadEditions(game.id)}
                 <p class="editions-muted">Loading…</p>
-              {:else if ed?.error}
-                <p class="editions-error">{ed.error}</p>
-              {:else if ed?.editions.length}
-                {#each ed.editions as edRow (edRow.id ?? edRow.title ?? edRow)}
-                  <div class="edition">
-                    <span class="ed-title">{edRow.title ?? game.title}</span>
-                    <span class="ed-meta">
-                      {#if edRow.platform}
-                        {normalizePlatform(edRow.platform)}
+              {:then edRowList}
+                {#if edRowList.length}
+                  {#each edRowList as edRow (edRow.id ?? edRow.title ?? edRow)}
+                    <div class="edition">
+                      <span class="ed-title">{edRow.title ?? game.title}</span>
+                      <span class="ed-meta">
+                        {#if edRow.platform}
+                          {normalizePlatform(edRow.platform)}
+                        {/if}
+                        {#if edRow.format}{formatLabel(edRow.format)}{/if}
+                      </span>
+                      <span
+                        class="ed-class"
+                        class:owned={edRow.ownership_class === "purchased"}
+                      >
+                        {formatClass(edRow.ownership_class)}
+                      </span>
+                      {#if formatPrice(edRow.price)}
+                        <span class="ed-price">{formatPrice(edRow.price)}</span>
                       {/if}
-                      {#if edRow.format}{formatLabel(edRow.format)}{/if}
-                    </span>
-                    <span
-                      class="ed-class"
-                      class:owned={edRow.ownership_class === "purchased"}
-                    >
-                      {formatClass(edRow.ownership_class)}
-                    </span>
-                    {#if formatPrice(edRow.price)}
-                      <span class="ed-price">{formatPrice(edRow.price)}</span>
-                    {/if}
-                    <span class="ed-date">
-                      {formatAcquisitionDate(edRow.acquisition_date) ??
-                        "Unknown"}
-                    </span>
-                  </div>
-                {/each}
-              {:else}
-                <p class="editions-muted">No editions</p>
-              {/if}
+                      <span class="ed-date">
+                        {formatAcquisitionDate(edRow.acquisition_date) ??
+                          "Unknown"}
+                      </span>
+                    </div>
+                  {/each}
+                {:else}
+                  <p class="editions-muted">No editions</p>
+                {/if}
+              {:catch err}
+                <p class="editions-error">{err.message ?? "Failed to load"}</p>
+              {/await}
             </div>
           {/if}
           {#if expanded.has(game.id) && game.igdb_id != null}
