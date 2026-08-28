@@ -1,16 +1,27 @@
 <script>
   import { enhance } from "$app/forms";
-  import { invalidateAll } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
 
   let { data } = $props();
 
-  const { status } = data;
-  const valid = status.status === "valid";
-  const needsRefresh = !valid;
+  const status = $derived(data.status);
+  const valid = $derived(status.status === "valid");
+  const needsRefresh = $derived(!valid);
 
   let npsso = $state("");
   let error = $state("");
   let success = $state("");
+
+  // Back to wherever the user came from (normally the catalog). Falls back to
+  // the catalog home when this page was opened directly, e.g. PWA launched
+  // straight to /psn — standalone PWAs have no in-app browser Back button.
+  function goBack() {
+    if (typeof history !== "undefined" && history.length > 1) {
+      history.back();
+    } else {
+      goto("/");
+    }
+  }
 
   async function onSubmit({ result }) {
     if (result.type === "failure") {
@@ -44,6 +55,12 @@
 </svelte:head>
 
 <main class="psn">
+  <div class="nav-row">
+    <button class="back" onclick={goBack} aria-label="Back to catalog">
+      ← Back
+    </button>
+  </div>
+
   <header class="top">
     <div>
       <h1>PSN credential</h1>
@@ -126,6 +143,24 @@
     max-width: 640px;
     margin: 0 auto;
     padding: 24px 20px 64px;
+  }
+  .nav-row {
+    margin-bottom: 12px;
+  }
+  .back {
+    background: transparent;
+    border: 1px solid #2a2f3d;
+    color: #b7c0d0;
+    cursor: pointer;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  .back:hover {
+    color: #fff;
+    background: #1f2330;
+    border-color: #e94560;
   }
   .top {
     display: flex;
