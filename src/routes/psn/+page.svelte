@@ -23,18 +23,25 @@
     }
   }
 
-  async function onSubmit({ result }) {
-    if (result.type === "failure") {
-      error = result.data?.error ?? "Refresh failed.";
-      success = "";
-    } else {
-      success = "Credential refreshed ✓";
-      error = "";
-      // Re-run the page load in place so Last success/Last error/Expires and
-      // the status badge update without a redirect (which would add a
-      // duplicate /psn history entry and break the Back button).
-      await invalidateAll();
-    }
+  function onSubmit() {
+    // use:enhance calls `submit` with the submit options and expects a function
+    // back that runs once the server responds — that's where `result` lives.
+    // Treating the submit options as `{ result }` made `result` undefined and
+    // the handler threw before the POST was ever sent (no feedback, stale
+    // credential).
+    return async ({ result }) => {
+      if (result.type === "failure") {
+        error = result.data?.error ?? "Refresh failed.";
+        success = "";
+      } else {
+        success = "Credential refreshed ✓";
+        error = "";
+        // Re-run the page load in place so Last success/Last error/Expires and
+        // the status badge update without a redirect (which would add a
+        // duplicate /psn history entry and break the Back button).
+        await invalidateAll();
+      }
+    };
   }
 
   function fmt(ts) {
