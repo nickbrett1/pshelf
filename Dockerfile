@@ -15,6 +15,8 @@ COPY . .
 RUN npm run build
 
 FROM node:24-slim
+# Link the GHCR container package to its GitHub repo (public repo -> public package).
+LABEL org.opencontainers.image.source=https://github.com/nickbrett1/pshelf
 WORKDIR /app
 
 ENV NODE_ENV=production
