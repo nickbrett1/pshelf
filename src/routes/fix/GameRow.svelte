@@ -3,7 +3,9 @@
 
   let { game } = $props();
 
-  let query = $state("");
+  // Prepopulate the IGDB search with the game's title — that's the term the
+  // user always searches for. They can still edit it before searching.
+  let query = $state(game.title);
   let candidates = $state([]);
   let searching = $state(false);
   let searchError = $state("");
