@@ -94,14 +94,16 @@ export function keepIfCancelPsPlus(games) {
  * Parse an acquisition/purchase date into a sortable number, or null when
  * unparseable/empty.
  *
- * Mailroom stores acquisition dates as human-readable strings such as
- * "Nov 27, 2024" or "July 26, 2026" — NOT ISO. String comparison on those is
- * wrong ("Nov" > "July" alphabetically), which broke "Sort by Purchase Date".
- * So we normalize to a comparable value:
- *  - ISO "YYYY-MM-DD" (and "YYYY-MM-DD HH:MM" variants) → YYYYMMDD as a
- *    number, which is timezone-independent and sorts correctly.
- *  - Everything else (e.g. "Nov 27, 2024") → millisecond timestamp via
- *    Date.parse, which understands US month-name dates.
+ * Mailroom stores acquisition dates in several inconsistent formats —
+ * ISO ("2026-05-05", used by PSN sync), US month-name ("Nov 27, 2024",
+ * "Wednesday, November 27, 2024") and US numeric ("05/08/2021"). String
+ * comparison on those is wrong ("Nov" > "July" alphabetically), which broke
+ * "Sort by Purchase Date". So we normalize every format to a comparable
+ * YYYYMMDD number (e.g. 20260505), reading local date parts so a UTC-parsed
+ * date can't shift a day under a local timezone. A single scale for all
+ * formats is essential: an earlier design returned epoch-millis for non-ISO
+ * but YYYYMMDD for ISO, so ISO-dated games (PS+ claims like "2026-05-05")
+ * always sorted below far older US-format purchases.
  * @param {string|null|undefined} value
  * @returns {number|null}
  */
@@ -109,10 +111,23 @@ export function parseAcquisitionDate(value) {
   if (value == null) return null;
   const s = String(value).trim();
   if (!s) return null;
-  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-  if (iso) return Number(`${iso[1]}${iso[2]}${iso[3]}`);
+  // ISO "YYYY-MM-DD" (optionally with a time): read the components directly so
+  // a UTC-parsed date can't shift a day under a local timezone.
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (iso) {
+    return Number(iso[1]) * 10000 + Number(iso[2]) * 100 + Number(iso[3]);
+  }
+  // Human-readable / anything else (e.g. "Nov 27, 2024", "05/08/2021",
+  // "Wednesday, November 27, 2024"): Date.parse treats a date-only string as
+  // local midnight, so reading the local parts reproduces the original date.
+  // We fold it into the same YYYYMMDD integer as the ISO branch so every
+  // format produces a directly comparable sort key (a per-format scale split —
+  // integer YYYYMMDD vs epoch-millis — silently reordered ISO-dated games
+  // below much older purchases).
   const t = Date.parse(s);
-  return Number.isNaN(t) ? null : t;
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
 
 const MONTH_NAMES = [

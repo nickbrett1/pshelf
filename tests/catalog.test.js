@@ -149,6 +149,22 @@ describe("parseAcquisitionDate", () => {
     expect(jul).toBeGreaterThan(nov);
   });
 
+  it("uses ONE comparable scale across ISO, numeric and written formats", () => {
+    // PSN sync stores ISO; manual/retail entries are US numeric or written.
+    // These must fold to the same YYYYMMDD so ISO-dated games (e.g. a
+    // 2026-05-05 PS+ claim) don't sort below much older purchases.
+    expect(parseAcquisitionDate("2026-05-05")).toBe(
+      parseAcquisitionDate("05/05/2026"),
+    );
+    expect(parseAcquisitionDate("2026-05-05")).toBe(
+      parseAcquisitionDate("May 5, 2026"),
+    );
+    // A May 2026 claim is newer than a 2021 purchase in ANY source format.
+    expect(parseAcquisitionDate("2026-05-05")).toBeGreaterThan(
+      parseAcquisitionDate("05/08/2021"),
+    );
+  });
+
   it("returns null for empty, null and garbage values", () => {
     expect(parseAcquisitionDate(null)).toBeNull();
     expect(parseAcquisitionDate(undefined)).toBeNull();
