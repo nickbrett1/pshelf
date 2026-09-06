@@ -27,8 +27,7 @@
   },
   "mounts": [
     "source=pshelf-tailscale-state,target=/var/lib/tailscale,type=volume",
-    "source=${localEnv:HOME}/.doppler,target=/home/node/.doppler,type=bind",
-    "source=${localEnv:HOME}/.config/goose,target=/home/node/.config/goose,type=bind"
+    "source=${localEnv:HOME}/.doppler,target=/home/node/.doppler,type=bind"
   ],
   "forwardPorts": [],
   "containerEnv": {
