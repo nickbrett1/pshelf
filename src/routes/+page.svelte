@@ -459,6 +459,41 @@
     padding: 24px 20px 64px;
   }
 
+  /* Scale the shelf up on larger desktop displays. Phones/tablets stay at the
+     base sizes above (these min-width queries never match a small screen), so
+     mobile art is unchanged — but on a big 4K desktop the container widens and
+     the minimum cover width grows, so the art actually gets bigger instead of
+     staying tiny with empty space around it. */
+  @media (min-width: 1100px) {
+    .catalog {
+      max-width: 1600px;
+      padding-left: 28px;
+      padding-right: 28px;
+    }
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 22px;
+    }
+  }
+  @media (min-width: 1700px) {
+    .catalog {
+      max-width: 2100px;
+    }
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 26px;
+    }
+  }
+  @media (min-width: 2400px) {
+    .catalog {
+      max-width: 2800px;
+    }
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 30px;
+    }
+  }
+
   .hero {
     background: linear-gradient(135deg, #1a1a2e, #0f3460);
     border-radius: 16px;
