@@ -121,8 +121,7 @@
           rows="3"
           placeholder="np_..."
           autocomplete="off"
-          spellcheck="false"
-        ></textarea>
+          spellcheck="false"></textarea>
         <button type="submit" disabled={!npsso.trim()}
           >Refresh credential</button
         >
