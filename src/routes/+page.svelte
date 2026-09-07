@@ -800,17 +800,18 @@
     user-select: all;
   }
 
-  /* Desktop: exactly ~3 covers per row (requested). Phones/tablets stay at the
+  /* Desktop: exactly 3 covers per row (requested). Phones/tablets stay at the
      base sizes above (this min-width query never matches a small screen), so
      mobile art is unchanged.
 
+     A fixed `repeat(3, ...)` (rather than auto-fill) guarantees the grid can
+     never drop to 2 columns on desktop — at 2 columns each cover gets stretched
+     larger than its native resolution and loses sharpness. Three columns keeps
+     each cover within the container (capped at 1760px, so ~max 540px wide).
+
      IMPORTANT: these overrides MUST come after the base `.catalog` / `.grid`
      rules (end of the stylesheet) — equal-specificity rules defined earlier
-     (the base grid at ~180px) would otherwise win and the covers would never
-     grow. auto-fill adds MORE columns to fill extra width, so to land on a
-     fixed small number we make the per-column minimum large enough that a 4th
-     column can't fit inside the capped container — leaving 3 columns that grow
-     with the container. */
+     would otherwise win and the covers would never grow. */
   @media (min-width: 1100px) {
     .catalog {
       max-width: 1760px;
@@ -818,7 +819,7 @@
       padding-right: 32px;
     }
     .grid {
-      grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 32px;
     }
   }
