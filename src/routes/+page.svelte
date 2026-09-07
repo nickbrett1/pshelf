@@ -495,26 +495,6 @@
     }
   }
 
-  /* Desktop: exactly ~3 covers per row (requested). Phones/tablets stay at the
-     base sizes above (this min-width query never matches a small screen), so
-     mobile art is unchanged.
-
-     auto-fill adds MORE columns to fill any extra width, so to land on a fixed
-     small number we make the per-column minimum large enough that a 4th column
-     can't fit inside the capped container — leaving 3 columns that grow with
-     the container. */
-  @media (min-width: 1100px) {
-    .catalog {
-      max-width: 1760px;
-      padding-left: 32px;
-      padding-right: 32px;
-    }
-    .grid {
-      grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
-      gap: 32px;
-    }
-  }
-
   .hero {
     background: linear-gradient(135deg, #1a1a2e, #0f3460);
     border-radius: 16px;
@@ -818,5 +798,28 @@
     color: #4a5268;
     letter-spacing: 0.04em;
     user-select: all;
+  }
+
+  /* Desktop: exactly ~3 covers per row (requested). Phones/tablets stay at the
+     base sizes above (this min-width query never matches a small screen), so
+     mobile art is unchanged.
+
+     IMPORTANT: these overrides MUST come after the base `.catalog` / `.grid`
+     rules (end of the stylesheet) — equal-specificity rules defined earlier
+     (the base grid at ~180px) would otherwise win and the covers would never
+     grow. auto-fill adds MORE columns to fill extra width, so to land on a
+     fixed small number we make the per-column minimum large enough that a 4th
+     column can't fit inside the capped container — leaving 3 columns that grow
+     with the container. */
+  @media (min-width: 1100px) {
+    .catalog {
+      max-width: 1760px;
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+      gap: 32px;
+    }
   }
 </style>
