@@ -1,6 +1,14 @@
 <script>
   import { assets } from "$app/paths";
   import GameCover from "$lib/GameCover.svelte";
+
+  // Discreet build indicator (git SHA baked in at build time via the
+  // `__APP_COMMIT__` define — see vite.config.js). Lets us confirm which exact
+  // build a given browser tab is running — handy when debugging "I'm not seeing
+  // the latest change" (stale service-worker cache vs. container not updated).
+  const APP_COMMIT = __APP_COMMIT__;
+  const commitShort =
+    APP_COMMIT && APP_COMMIT !== "dev" ? APP_COMMIT.slice(0, 7) : "dev";
   import {
     filterGames,
     formatAcquisitionDate,
@@ -230,6 +238,11 @@
 </svelte:head>
 
 <main class="catalog">
+  <!-- Discreet build indicator, fixed top-right. Hidden below desktop widths
+       so it never clutters the mobile view. -->
+  {#if commitShort}
+    <span class="build" title="build {__APP_COMMIT__}">{commitShort}</span>
+  {/if}
   <header class="hero">
     <div class="hero-inner">
       <div class="brand">
@@ -457,6 +470,29 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 24px 20px 64px;
+  }
+
+  /* Discreet build indicator (git SHA), fixed to the top-right corner of the
+     window. Hidden on narrow/mobile screens where it would overlap content. */
+  .build {
+    position: fixed;
+    top: 10px;
+    right: 12px;
+    z-index: 60;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: #4a5268;
+    background: rgba(15, 17, 23, 0.65);
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid #232838;
+    user-select: all;
+  }
+  @media (max-width: 1099px) {
+    .build {
+      display: none;
+    }
   }
 
   /* Desktop: exactly ~3 covers per row (requested). Phones/tablets stay at the

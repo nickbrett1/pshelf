@@ -2,7 +2,16 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import { SvelteKitPWA } from "@vite-pwa/sveltekit";
 import { defineConfig } from "vite";
 
+// Commit SHA baked into the client/server bundles at build time (shown
+// discretely in the UI so we can confirm which build a tab is running). Falls
+// back to "dev" for local builds. The Docker build sets COMMIT_SHA via a build
+// arg from CI ($CIRCLE_SHA1).
+const APP_COMMIT = process.env.COMMIT_SHA || "dev";
+
 export default defineConfig({
+  define: {
+    __APP_COMMIT__: JSON.stringify(APP_COMMIT),
+  },
   plugins: [
     sveltekit(),
     // PWA support (manifest + service worker). Pshelf is SSR'd (adapter-node),

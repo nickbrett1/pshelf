@@ -12,6 +12,10 @@ WORKDIR /app
 COPY package.json package-lock.json* .npmrc* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
+# Bake the git commit SHA (passed by CI as a build arg) into the client bundle
+# so the UI can show which exact build is running. `dev` when built locally.
+ARG COMMIT_SHA=dev
+ENV COMMIT_SHA=${COMMIT_SHA}
 RUN npm run build
 
 FROM node:24-slim
