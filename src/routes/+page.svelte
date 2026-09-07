@@ -461,36 +461,41 @@
 
   /* Scale the shelf up on larger desktop displays. Phones/tablets stay at the
      base sizes above (these min-width queries never match a small screen), so
-     mobile art is unchanged — but on a big 4K desktop the container widens and
-     the minimum cover width grows, so the art actually gets bigger instead of
-     staying tiny with empty space around it. */
+     mobile art is unchanged.
+
+     The grid uses `repeat(auto-fill, minmax(<min>, 1fr))`, which fills any
+     extra width by adding MORE columns at roughly the minimum size. So to make
+     each cover genuinely bigger on a wide screen you have to raise the per
+     column *minimum* (that forces fewer, larger columns) — widening the
+     container alone just crams in extra small columns. That's why each tier
+     below bumps the minimum up substantially. */
   @media (min-width: 1100px) {
     .catalog {
-      max-width: 1600px;
-      padding-left: 28px;
-      padding-right: 28px;
-    }
-    .grid {
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 22px;
-    }
-  }
-  @media (min-width: 1700px) {
-    .catalog {
-      max-width: 2100px;
+      max-width: 1720px;
+      padding-left: 32px;
+      padding-right: 32px;
     }
     .grid {
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 26px;
+      gap: 24px;
     }
   }
-  @media (min-width: 2400px) {
+  @media (min-width: 1800px) {
     .catalog {
-      max-width: 2800px;
+      max-width: 2280px;
     }
     .grid {
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 30px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 28px;
+    }
+  }
+  @media (min-width: 2600px) {
+    .catalog {
+      max-width: 3000px;
+    }
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 32px;
     }
   }
 
