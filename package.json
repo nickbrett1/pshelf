@@ -41,7 +41,7 @@
     "lint-staged": "^17.3.0",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
-    "simple-git-hooks": "^2.13.1",
+    "simple-git-hooks": "^2.14.0",
     "svelte": "^5.46.1",
     "svelte-check": "^4.1.1",
     "typescript": "^6.0.3",
