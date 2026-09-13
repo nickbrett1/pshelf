@@ -12,8 +12,9 @@ mailroom's manual-edit API (single-writer rule).
   class, retailer, cover art, genres and IGDB rating.
 - **Instant search** — client-side, debounced free-text filter over the
   in-memory catalog (title, genre, platform, retailer) with highlighted matches.
-- **Filter & sort** — by platform, format, ownership class; sort by title,
-  platform or rating.
+- **Filter & sort** — filter by platform, format, ownership class and genre;
+  sort by title, rating, purchase date, release year (newest/oldest) or price
+  (cheapest/most expensive).
 - **"Keep if I cancel PS+"** split — at-a-glance count of titles that survive
   dropping the PS+ subscription.
 

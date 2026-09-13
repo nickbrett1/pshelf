@@ -50,7 +50,11 @@ function seedGamesDb() {
 			'PSN' AS retailer,
 			'/covers/bb.jpg' AS cover_local,
 			92 AS rating,
-			2015 AS year,
+			-- Real mailroom views expose NO "year" column; the release signal is
+			-- "release_ts" (IGDB first_release_date, epoch SECONDS). 1427155200
+			-- = 2015-03-24 (Bloodborne).
+			1427155200 AS release_ts,
+			'$19.99' AS price,
 			'Action RPG, Souls' AS genres,
 			0 AS is_psvr2,
 			'[{"id":1,"title":"Bloodborne","platform":"PS4","format":"digital","ownership_class":"purchased","price":19.99,"acquisition_date":"2015-03-24"}]' AS editions;
@@ -71,12 +75,13 @@ function seedViewsDb() {
 			retailer TEXT,
 			cover_url TEXT,
 			rating REAL,
-			year INTEGER,
+			-- release_ts (epoch SECONDS), not a "year" column - mirrors mailroom.
+			release_ts INTEGER,
 			genres TEXT
 		);
 		INSERT INTO catalog_views VALUES
-			(1, 'Bloodborne', 'PS4', 'digital', 'purchased', 'PSN', 'http://img/bb.jpg', 92, 2015, 'Action RPG, Souls'),
-			(2, 'Returnal', 'PS5', 'digital', 'psplus_extra', 'PSN', 'http://img/rt.jpg', 88, 2021, 'Roguelike');
+			(1, 'Bloodborne', 'PS4', 'digital', 'purchased', 'PSN', 'http://img/bb.jpg', 92, 1427155200, 'Action RPG, Souls'),
+			(2, 'Returnal', 'PS5', 'digital', 'psplus_extra', 'PSN', 'http://img/rt.jpg', 88, 1619740800, 'Roguelike');
 	`);
   db.close();
 }
@@ -94,6 +99,15 @@ describe("loadCatalog", () => {
     expect(games[0].num_editions).toBe(1);
     expect(games[0].editions).toHaveLength(1);
     expect(games[0].editions[0].ownership_class).toBe("purchased");
+    // Year is DERIVED from release_ts (there is no `year` column).
+    expect(games[0].year).toBe(2015);
+    expect(games[0].price).toBe("$19.99");
+  });
+
+  it("derives year from release_ts on the legacy views fallback too", () => {
+    seedViewsDb();
+    const games = loadCatalog();
+    expect(games.map((g) => g.year)).toEqual([2015, 2021]);
   });
 
   it("falls back to catalog_views when catalog_games is absent", () => {

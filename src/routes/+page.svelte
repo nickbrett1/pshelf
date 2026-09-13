@@ -14,6 +14,7 @@
     formatAcquisitionDate,
     keepIfCancelPsPlus,
     normalizePlatform,
+    parseNumber,
     sortGames,
   } from "$lib/catalog.js";
 
@@ -200,10 +201,11 @@
   }
 
   function formatPrice(price) {
-    if (price == null || price === "") return null;
-    const n = Number(price);
-    if (Number.isNaN(n)) return null;
-    return `$${n.toFixed(2)}`;
+    // Prices come from mailroom as currency strings ("$19.99"), which a bare
+    // Number() turns into NaN — hiding every price. parseNumber() strips the
+    // currency formatting first.
+    const n = parseNumber(price);
+    return n == null ? null : `$${n.toFixed(2)}`;
   }
 
   function resetFilters() {

@@ -17,6 +17,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { yearFromReleaseTs } from "../catalog.js";
 const require = createRequire(import.meta.url);
 
 const DEFAULT_DB_CANDIDATES = ["catalog.db", "mailroom.db", "mailroom.db-wal"];
@@ -72,7 +73,14 @@ export function mapRow(row) {
     // placeholder. No live IGDB dependency.
     cover: row.cover_local ?? null,
     rating: row.rating ?? null,
-    year: row.year ?? row.release_year ?? null,
+    // Release year for the UI's "Sort by Release Year" dimension. Mailroom's
+    // catalog_games/catalog_views expose NO `year` column — the only release
+    // signal is `release_ts` (IGDB first_release_date as epoch SECONDS), so
+    // derive the year from it. A literal year/release_year column is honored
+    // first if a future view ever adds one. (Reading `row.year` alone was why
+    // the sort silently did nothing: the column never existed.)
+    year:
+      row.year ?? row.release_year ?? yearFromReleaseTs(row.release_ts) ?? null,
     genres: parseList(row.genres ?? row.genre ?? ""),
     // PSVR2 flag from catalog_games/catalog_views is_psvr2 (IGDB platform
     // 390). A category flag, not a platform — PSVR2 games run on PS5, so the

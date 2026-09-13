@@ -5,7 +5,9 @@ import {
   keepIfCancelPsPlus,
   normalizePlatform,
   parseAcquisitionDate,
+  parseNumber,
   sortGames,
+  yearFromReleaseTs,
 } from "../src/lib/catalog.js";
 
 const games = [
@@ -306,5 +308,71 @@ describe("sortGames", () => {
   it("preserves incoming order for an unknown dimension", () => {
     const input = [g("B"), g("A")];
     expect(titles(sortGames(input, "nonsense"))).toEqual(["B", "A"]);
+  });
+
+  describe("price stored as a currency string (mailroom's real format)", () => {
+    const input = [
+      g("Mid", { price: "$19.99" }),
+      g("Unknown"),
+      g("Free", { price: "$0.00" }),
+      g("Pricey", { price: "$69.99" }),
+    ];
+
+    it("sorts '$'-prefixed prices, not treating them as unknown", () => {
+      expect(titles(sortGames(input, "price_asc"))).toEqual([
+        "Free",
+        "Mid",
+        "Pricey",
+        "Unknown",
+      ]);
+      expect(titles(sortGames(input, "price_desc"))).toEqual([
+        "Pricey",
+        "Mid",
+        "Free",
+        "Unknown",
+      ]);
+    });
+  });
+});
+
+describe("parseNumber", () => {
+  it("parses plain numbers and numeric strings", () => {
+    expect(parseNumber(19.99)).toBe(19.99);
+    expect(parseNumber("19.99")).toBe(19.99);
+    expect(parseNumber(0)).toBe(0);
+  });
+
+  it("strips currency symbols and thousands separators", () => {
+    expect(parseNumber("$19.99")).toBe(19.99);
+    expect(parseNumber("$1,234.56")).toBe(1234.56);
+    expect(parseNumber("$0.00")).toBe(0);
+  });
+
+  it("returns null for absent or non-numeric values", () => {
+    expect(parseNumber(null)).toBeNull();
+    expect(parseNumber(undefined)).toBeNull();
+    expect(parseNumber("")).toBeNull();
+    expect(parseNumber("   ")).toBeNull();
+    expect(parseNumber("free")).toBeNull();
+  });
+});
+
+describe("yearFromReleaseTs", () => {
+  it("derives the year from epoch SECONDS", () => {
+    expect(yearFromReleaseTs(1427155200)).toBe(2015); // 2015-03-24
+    expect(yearFromReleaseTs(1619740800)).toBe(2021); // 2021-04-30
+  });
+
+  it("reads the year in UTC (no local-timezone off-by-one)", () => {
+    // 2020-01-01T00:00:00Z — local getFullYear() west of UTC would give 2019.
+    expect(yearFromReleaseTs(1577836800)).toBe(2020);
+  });
+
+  it("returns null for missing/zero/garbage values", () => {
+    expect(yearFromReleaseTs(null)).toBeNull();
+    expect(yearFromReleaseTs(undefined)).toBeNull();
+    expect(yearFromReleaseTs("")).toBeNull();
+    expect(yearFromReleaseTs(0)).toBeNull();
+    expect(yearFromReleaseTs("not a date")).toBeNull();
   });
 });

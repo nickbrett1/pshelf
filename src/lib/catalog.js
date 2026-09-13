@@ -179,16 +179,44 @@ export function formatAcquisitionDate(value) {
 
 /**
  * Coerce a raw catalog value to a finite number, or null when it's absent or
- * unparseable. Used for the numeric sort keys (release year, price), where the
- * underlying column can be null, an empty string, or a numeric string.
- * "0" stays 0 (a free game is the cheapest, not "unknown").
+ * unparseable. Used for the numeric sort keys (release year, price).
+ *
+ * Mailroom stores prices as *currency strings* ("$19.99", per its receipt
+ * parsers), so a bare `Number(value)` yields NaN and every price would look
+ * "unknown" — which silently disabled the Price sort. Strip currency symbols,
+ * thousands separators and whitespace first. "0"/"$0.00" stays 0 (a free game
+ * is the cheapest, not "unknown"); genuine non-numbers return null.
  * @param {*} value
  * @returns {number|null}
  */
-function toNumberOrNull(value) {
-  if (value == null || value === "") return null;
-  const n = Number(value);
+export function parseNumber(value) {
+  if (value == null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const cleaned = s.replace(/[^0-9.-]/g, "");
+  if (!cleaned) return null;
+  const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Derive a release year from mailroom's `release_ts` view column.
+ *
+ * Neither `catalog_games` nor `catalog_views` exposes a plain `year`; the only
+ * release signal is `release_ts` — IGDB's `first_release_date` as a Unix
+ * EPOCH-SECONDS integer (see mailroom db.py). We read the year in UTC so a
+ * January 1 release can't slip into the previous year under a local timezone.
+ * Returns null for missing/zero/unparseable values (those sort last).
+ * @param {number|string|null|undefined} value epoch seconds
+ * @returns {number|null}
+ */
+export function yearFromReleaseTs(value) {
+  const ts = parseNumber(value);
+  if (ts == null || ts <= 0) return null;
+  const d = new Date(ts * 1000);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.getUTCFullYear();
 }
 
 /**
@@ -245,13 +273,13 @@ export function sortGames(games, sortBy) {
           (b.purchase_date ?? -Infinity) - (a.purchase_date ?? -Infinity),
       );
     case "released_desc":
-      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.year), "desc"));
+      return sorted.sort(byNumber((g2) => parseNumber(g2.year), "desc"));
     case "released_asc":
-      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.year), "asc"));
+      return sorted.sort(byNumber((g2) => parseNumber(g2.year), "asc"));
     case "price_asc":
-      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.price), "asc"));
+      return sorted.sort(byNumber((g2) => parseNumber(g2.price), "asc"));
     case "price_desc":
-      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.price), "desc"));
+      return sorted.sort(byNumber((g2) => parseNumber(g2.price), "desc"));
     default:
       return sorted;
   }
