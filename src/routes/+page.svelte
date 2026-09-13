@@ -12,6 +12,7 @@
   import {
     filterGames,
     formatAcquisitionDate,
+    formatReleaseDate,
     keepIfCancelPsPlus,
     normalizePlatform,
     parseNumber,
@@ -328,8 +329,8 @@
           <option value="title">Sort by Title</option>
           <option value="rating">Sort by Rating</option>
           <option value="purchased">Sort by Purchase Date</option>
-          <option value="released_desc">Release Year: Newest</option>
-          <option value="released_asc">Release Year: Oldest</option>
+          <option value="released_desc">Release Date: Newest</option>
+          <option value="released_asc">Release Date: Oldest</option>
           <option value="price_asc">Price: Cheapest</option>
           <option value="price_desc">Price: Most Expensive</option>
         </select>
@@ -383,6 +384,11 @@
             {/if}
             {#if game.rating}
               <p class="rating">★ {game.rating.toFixed(1)}</p>
+            {/if}
+            {#if expanded.has(game.id) && formatReleaseDate(game.release_ts)}
+              <p class="released">
+                Released {formatReleaseDate(game.release_ts)}
+              </p>
             {/if}
           </div>
           {#if expanded.has(game.id) && (game.num_editions ?? 1) > 0}
@@ -693,6 +699,12 @@
     font-size: 0.8rem;
   }
   .retailer {
+    margin: 0;
+    color: #6b7488;
+    font-size: 0.75rem;
+  }
+  /* Release date, revealed on expand (game-level IGDB metadata). */
+  .released {
     margin: 0;
     color: #6b7488;
     font-size: 0.75rem;

@@ -13,8 +13,8 @@ mailroom's manual-edit API (single-writer rule).
 - **Instant search** — client-side, debounced free-text filter over the
   in-memory catalog (title, genre, platform, retailer) with highlighted matches.
 - **Filter & sort** — filter by platform, format, ownership class and genre;
-  sort by title, rating, purchase date, release year (newest/oldest) or price
-  (cheapest/most expensive).
+  sort by title, rating, purchase date, release date (newest/oldest) or price
+  (cheapest/most expensive). Expanding a card shows the game's release date.
 - **"Keep if I cancel PS+"** split — at-a-glance count of titles that survive
   dropping the PS+ subscription.
 

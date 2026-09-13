@@ -7,7 +7,7 @@ import {
   parseAcquisitionDate,
   parseNumber,
   sortGames,
-  yearFromReleaseTs,
+  formatReleaseDate,
 } from "../src/lib/catalog.js";
 
 const games = [
@@ -229,18 +229,21 @@ describe("sortGames", () => {
   });
 
   it("does not mutate the input array", () => {
-    const input = [g("B", { year: 2001 }), g("A", { year: 1999 })];
+    const input = [
+      g("B", { release_ts: 978307200 }),
+      g("A", { release_ts: 915148800 }),
+    ];
     const snapshot = [...input];
     sortGames(input, "released_asc");
     expect(input).toEqual(snapshot);
   });
 
-  describe("release year", () => {
+  describe("release date", () => {
     const input = [
-      g("Old", { year: 1999 }),
+      g("Old", { release_ts: 915148800 }), // 1999-01-01
       g("Unknown"),
-      g("New", { year: 2024 }),
-      g("Mid", { year: 2015 }),
+      g("New", { release_ts: 1704067200 }), // 2024-01-01
+      g("Mid", { release_ts: 1427155200 }), // 2015-03-24
     ];
 
     it("newest first, unknown last", () => {
@@ -261,8 +264,26 @@ describe("sortGames", () => {
       ]);
     });
 
-    it("treats an empty-string year as unknown (sorts last)", () => {
-      const withEmpty = [g("Blank", { year: "" }), g("Real", { year: 2010 })];
+    it("orders by exact date, not just year (day granularity)", () => {
+      const sameYear = [
+        g("Dec", { release_ts: 1451520000 }), // 2015-12-31
+        g("Mar", { release_ts: 1427155200 }), // 2015-03-24
+      ];
+      expect(titles(sortGames(sameYear, "released_desc"))).toEqual([
+        "Dec",
+        "Mar",
+      ]);
+      expect(titles(sortGames(sameYear, "released_asc"))).toEqual([
+        "Mar",
+        "Dec",
+      ]);
+    });
+
+    it("treats an empty-string release_ts as unknown (sorts last)", () => {
+      const withEmpty = [
+        g("Blank", { release_ts: "" }),
+        g("Real", { release_ts: 1262304000 }), // 2010-01-01
+      ];
       expect(titles(sortGames(withEmpty, "released_desc"))).toEqual([
         "Real",
         "Blank",
@@ -357,22 +378,22 @@ describe("parseNumber", () => {
   });
 });
 
-describe("yearFromReleaseTs", () => {
-  it("derives the year from epoch SECONDS", () => {
-    expect(yearFromReleaseTs(1427155200)).toBe(2015); // 2015-03-24
-    expect(yearFromReleaseTs(1619740800)).toBe(2021); // 2021-04-30
+describe("formatReleaseDate", () => {
+  it("formats epoch SECONDS as a long-form date", () => {
+    expect(formatReleaseDate(1427155200)).toBe("March 24, 2015");
+    expect(formatReleaseDate(1619740800)).toBe("April 30, 2021");
   });
 
-  it("reads the year in UTC (no local-timezone off-by-one)", () => {
-    // 2020-01-01T00:00:00Z — local getFullYear() west of UTC would give 2019.
-    expect(yearFromReleaseTs(1577836800)).toBe(2020);
+  it("reads the date in UTC (no local-timezone off-by-one)", () => {
+    // 2020-01-01T00:00:00Z — local date parts west of UTC would give 2019-12-31.
+    expect(formatReleaseDate(1577836800)).toBe("January 1, 2020");
   });
 
   it("returns null for missing/zero/garbage values", () => {
-    expect(yearFromReleaseTs(null)).toBeNull();
-    expect(yearFromReleaseTs(undefined)).toBeNull();
-    expect(yearFromReleaseTs("")).toBeNull();
-    expect(yearFromReleaseTs(0)).toBeNull();
-    expect(yearFromReleaseTs("not a date")).toBeNull();
+    expect(formatReleaseDate(null)).toBeNull();
+    expect(formatReleaseDate(undefined)).toBeNull();
+    expect(formatReleaseDate("")).toBeNull();
+    expect(formatReleaseDate(0)).toBeNull();
+    expect(formatReleaseDate("not a date")).toBeNull();
   });
 });

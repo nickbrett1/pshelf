@@ -72,10 +72,9 @@ function slimGame(g) {
     genres: g.genres,
     retailer: g.retailer,
     rating: g.rating,
-    // Release year and (top-level) price are shipped purely as sort keys for
-    // "Release Year" and "Price". They're not rendered on the card; keeping
-    // them out of the payload (as before) would make those sorts impossible.
-    year: g.year,
+    // Release date (epoch seconds) as a sort key and for the expanded-card
+    // "Released <date>" line — see note in catalog-store's mapRow.
+    release_ts: g.release_ts,
     price: g.price,
     num_editions: g.num_editions,
     purchased: g.purchased,

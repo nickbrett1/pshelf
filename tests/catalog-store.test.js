@@ -99,15 +99,15 @@ describe("loadCatalog", () => {
     expect(games[0].num_editions).toBe(1);
     expect(games[0].editions).toHaveLength(1);
     expect(games[0].editions[0].ownership_class).toBe("purchased");
-    // Year is DERIVED from release_ts (there is no `year` column).
-    expect(games[0].year).toBe(2015);
+    // release_ts is shipped as the release signal (there is no `year` column).
+    expect(games[0].release_ts).toBe(1427155200);
     expect(games[0].price).toBe("$19.99");
   });
 
-  it("derives year from release_ts on the legacy views fallback too", () => {
+  it("maps release_ts on the legacy views fallback too", () => {
     seedViewsDb();
     const games = loadCatalog();
-    expect(games.map((g) => g.year)).toEqual([2015, 2021]);
+    expect(games.map((g) => g.release_ts)).toEqual([1427155200, 1619740800]);
   });
 
   it("falls back to catalog_views when catalog_games is absent", () => {
@@ -158,7 +158,7 @@ describe("mapRow", () => {
       retailer: "PSN",
       cover_local: "/covers/ai.jpg",
       rating: 90,
-      year: 2014,
+      release_ts: 1412640000,
       genres: "Survival Horror",
       is_psvr2: 0,
       editions: JSON.stringify([
@@ -184,7 +184,7 @@ describe("mapRow", () => {
       retailer: "PSN",
       cover: "/covers/ai.jpg",
       rating: 90,
-      year: 2014,
+      release_ts: 1412640000,
       genres: ["Survival Horror"],
       psvr2: false,
       editions: [
@@ -215,7 +215,7 @@ describe("mapRow", () => {
       retailer: "GameStop",
       cover_local: "/covers/h.jpg",
       rating: 89,
-      year: 2017,
+      release_ts: 1488240000,
       genres: "Action RPG",
     };
     expect(mapRow(row)).toEqual({
@@ -229,7 +229,7 @@ describe("mapRow", () => {
       retailer: "GameStop",
       cover: "/covers/h.jpg",
       rating: 89,
-      year: 2017,
+      release_ts: 1488240000,
       genres: ["Action RPG"],
       psvr2: false,
       editions: [],
