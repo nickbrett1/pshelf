@@ -14,6 +14,7 @@
     formatAcquisitionDate,
     keepIfCancelPsPlus,
     normalizePlatform,
+    sortGames,
   } from "$lib/catalog.js";
 
   let { data } = $props();
@@ -86,27 +87,10 @@
     return games;
   });
 
-  const sorted = $derived.by(() => {
-    const games = [...filtered];
-    games.sort((a, b) => {
-      switch (sortBy) {
-        case "title":
-          return a.title.localeCompare(b.title);
-        case "rating":
-          return (b.rating ?? 0) - (a.rating ?? 0);
-        case "purchased":
-          // Most recent purchase first (descending); no date sorts last.
-          // purchase_date is precomputed server-side (the client no longer
-          // receives every game's editions, which the old date sort depended on).
-          return (
-            (b.purchase_date ?? -Infinity) - (a.purchase_date ?? -Infinity)
-          );
-        default:
-          return 0;
-      }
-    });
-    return games;
-  });
+  // Sorting lives in $lib/catalog.js (sortGames) so the comparators are
+  // unit-testable; the component just names the dimension. Unknown
+  // year/price/purchase_date values sort last for every numeric dimension.
+  const sorted = $derived(sortGames(filtered, sortBy));
 
   const split = $derived(keepIfCancelPsPlus(data.games));
 
@@ -342,6 +326,10 @@
           <option value="title">Sort by Title</option>
           <option value="rating">Sort by Rating</option>
           <option value="purchased">Sort by Purchase Date</option>
+          <option value="released_desc">Release Year: Newest</option>
+          <option value="released_asc">Release Year: Oldest</option>
+          <option value="price_asc">Price: Cheapest</option>
+          <option value="price_desc">Price: Most Expensive</option>
         </select>
 
         <button class="reset" onclick={resetFilters}>Reset</button>

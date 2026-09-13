@@ -5,6 +5,7 @@ import {
   keepIfCancelPsPlus,
   normalizePlatform,
   parseAcquisitionDate,
+  sortGames,
 } from "../src/lib/catalog.js";
 
 const games = [
@@ -200,5 +201,110 @@ describe("formatAcquisitionDate", () => {
     expect(formatAcquisitionDate(undefined)).toBeNull();
     expect(formatAcquisitionDate("")).toBeNull();
     expect(formatAcquisitionDate("not a date")).toBeNull();
+  });
+});
+
+describe("sortGames", () => {
+  const titles = (games) => games.map((g) => g.title);
+  const g = (title, extra = {}) => ({ title, ...extra });
+
+  it("sorts by title A→Z", () => {
+    const input = [g("Returnal"), g("Bloodborne"), g("Astro Bot")];
+    expect(titles(sortGames(input, "title"))).toEqual([
+      "Astro Bot",
+      "Bloodborne",
+      "Returnal",
+    ]);
+  });
+
+  it("sorts by rating, highest first, missing rating last", () => {
+    const input = [
+      g("High", { rating: 92 }),
+      g("None"),
+      g("Mid", { rating: 80 }),
+    ];
+    expect(titles(sortGames(input, "rating"))).toEqual(["High", "Mid", "None"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const input = [g("B", { year: 2001 }), g("A", { year: 1999 })];
+    const snapshot = [...input];
+    sortGames(input, "released_asc");
+    expect(input).toEqual(snapshot);
+  });
+
+  describe("release year", () => {
+    const input = [
+      g("Old", { year: 1999 }),
+      g("Unknown"),
+      g("New", { year: 2024 }),
+      g("Mid", { year: 2015 }),
+    ];
+
+    it("newest first, unknown last", () => {
+      expect(titles(sortGames(input, "released_desc"))).toEqual([
+        "New",
+        "Mid",
+        "Old",
+        "Unknown",
+      ]);
+    });
+
+    it("oldest first, unknown last", () => {
+      expect(titles(sortGames(input, "released_asc"))).toEqual([
+        "Old",
+        "Mid",
+        "New",
+        "Unknown",
+      ]);
+    });
+
+    it("treats an empty-string year as unknown (sorts last)", () => {
+      const withEmpty = [g("Blank", { year: "" }), g("Real", { year: 2010 })];
+      expect(titles(sortGames(withEmpty, "released_desc"))).toEqual([
+        "Real",
+        "Blank",
+      ]);
+    });
+  });
+
+  describe("price", () => {
+    const input = [
+      g("Mid", { price: 19.99 }),
+      g("Unknown"),
+      g("Free", { price: 0 }),
+      g("Pricey", { price: 69.99 }),
+    ];
+
+    it("cheapest first, unknown last, free beats undefined", () => {
+      expect(titles(sortGames(input, "price_asc"))).toEqual([
+        "Free",
+        "Mid",
+        "Pricey",
+        "Unknown",
+      ]);
+    });
+
+    it("most expensive first, unknown last", () => {
+      expect(titles(sortGames(input, "price_desc"))).toEqual([
+        "Pricey",
+        "Mid",
+        "Free",
+        "Unknown",
+      ]);
+    });
+
+    it("coerces numeric strings (SQLite may hand back text)", () => {
+      const withString = [g("Str", { price: "5.00" }), g("Num", { price: 10 })];
+      expect(titles(sortGames(withString, "price_asc"))).toEqual([
+        "Str",
+        "Num",
+      ]);
+    });
+  });
+
+  it("preserves incoming order for an unknown dimension", () => {
+    const input = [g("B"), g("A")];
+    expect(titles(sortGames(input, "nonsense"))).toEqual(["B", "A"]);
   });
 });

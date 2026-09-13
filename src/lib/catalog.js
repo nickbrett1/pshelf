@@ -176,3 +176,83 @@ export function formatAcquisitionDate(value) {
   const d = new Date(t);
   return formatYmd(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
+
+/**
+ * Coerce a raw catalog value to a finite number, or null when it's absent or
+ * unparseable. Used for the numeric sort keys (release year, price), where the
+ * underlying column can be null, an empty string, or a numeric string.
+ * "0" stays 0 (a free game is the cheapest, not "unknown").
+ * @param {*} value
+ * @returns {number|null}
+ */
+function toNumberOrNull(value) {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Comparator factory for a numeric field: known values sort first in the
+ * requested direction, unknown (null) values always sink to the bottom.
+ * Ascending uses `?? Infinity` so a null-year/price game lands last; descending
+ * uses `?? -Infinity` for the same reason.
+ * Takes a `getter` rather than a field name so there's no dynamic property
+ * access (which the security lint flags even for constant keys).
+ * @param {(game: Object) => number|null} getter
+ * @param {"asc"|"desc"} direction
+ * @returns {(a: Object, b: Object) => number}
+ */
+function byNumber(getter, direction) {
+  if (direction === "asc") {
+    return (a, b) => (getter(a) ?? Infinity) - (getter(b) ?? Infinity);
+  }
+  return (a, b) => (getter(b) ?? -Infinity) - (getter(a) ?? -Infinity);
+}
+
+/**
+ * Sort a list of games by the UI's chosen dimension. Returns a new array (never
+ * mutates the input) so it's safe to call on a `$derived` filtered list.
+ *
+ * Unknown values sort last for every numeric dimension — a game missing a
+ * release year or price shouldn't jump to the top of "Newest" or "Cheapest".
+ *
+ * Supported `sortBy` values:
+ *   title          — A→Z
+ *   rating         — highest first
+ *   purchased      — most recently acquired first
+ *   released_desc  — newest release year first
+ *   released_asc   — oldest release year first
+ *   price_asc      — cheapest first
+ *   price_desc     — most expensive first
+ * Anything else preserves the incoming order.
+ * @param {Array<Object>} games
+ * @param {string} sortBy
+ * @returns {Array<Object>}
+ */
+export function sortGames(games, sortBy) {
+  const sorted = [...games];
+  switch (sortBy) {
+    case "title":
+      return sorted.sort((a, b) =>
+        (a.title ?? "").localeCompare(b.title ?? ""),
+      );
+    case "rating":
+      return sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    case "purchased":
+      // Most recent purchase first; games with no date sort last.
+      return sorted.sort(
+        (a, b) =>
+          (b.purchase_date ?? -Infinity) - (a.purchase_date ?? -Infinity),
+      );
+    case "released_desc":
+      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.year), "desc"));
+    case "released_asc":
+      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.year), "asc"));
+    case "price_asc":
+      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.price), "asc"));
+    case "price_desc":
+      return sorted.sort(byNumber((g2) => toNumberOrNull(g2.price), "desc"));
+    default:
+      return sorted;
+  }
+}
