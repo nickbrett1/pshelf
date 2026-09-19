@@ -125,6 +125,41 @@ export async function excludeNonGame(ownedGameId, note = null) {
   }
 }
 
+/**
+ * Set a game's play state ('played' | 'unplayed' | 'completed') via mailroom's
+ * manual API — the only write path (single-writer rule; pshelf mounts the store
+ * read-only). The game is identified by its stable identity: igdb_id when
+ * matched, else the canonical normalized title. Mailroom keys the
+ * `game_play_state` row accordingly and folds the WAL so the next catalog read
+ * sees it.
+ * @param {{igdb_id?: number|null, normalized_title?: string|null, state: string}} args
+ * @returns {Promise<{ok: boolean, error?: string, play_state?: string, game_key?: string}>}
+ */
+export async function setPlayState({
+  igdb_id = null,
+  normalized_title = null,
+  state,
+}) {
+  try {
+    const res = await fetch(`${MANUAL_API}/manual/game/play-state`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ igdb_id, normalized_title, state }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      return {
+        ok: false,
+        error: `manual API ${res.status}: ${text.slice(0, 200)}`,
+      };
+    }
+    return { ok: true, ...(await res.json()) };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
 /** @returns {Promise<{status: string, last_success: string|null, last_error: string|null, expires_at: string|null}>} */
 export async function getPsnCredential({ timeout = 8000 } = {}) {
   const fallback = {

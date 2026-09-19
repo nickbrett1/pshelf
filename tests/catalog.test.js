@@ -4,6 +4,8 @@ import {
   formatAcquisitionDate,
   keepIfCancelPsPlus,
   normalizePlatform,
+  normalizePlayState,
+  playStateLabel,
   parseAcquisitionDate,
   parseNumber,
   sortGames,
@@ -395,5 +397,40 @@ describe("formatReleaseDate", () => {
     expect(formatReleaseDate("")).toBeNull();
     expect(formatReleaseDate(0)).toBeNull();
     expect(formatReleaseDate("not a date")).toBeNull();
+  });
+});
+
+describe("normalizePlayState", () => {
+  it("passes through the three canonical states", () => {
+    expect(normalizePlayState("unplayed")).toBe("unplayed");
+    expect(normalizePlayState("played")).toBe("played");
+    expect(normalizePlayState("completed")).toBe("completed");
+  });
+
+  it("is case/whitespace tolerant", () => {
+    expect(normalizePlayState("  Played ")).toBe("played");
+    expect(normalizePlayState("COMPLETED")).toBe("completed");
+  });
+
+  it("defaults missing/unknown values to 'unplayed'", () => {
+    // A pre-migration store has no play_state column -> undefined.
+    expect(normalizePlayState(undefined)).toBe("unplayed");
+    expect(normalizePlayState(null)).toBe("unplayed");
+    expect(normalizePlayState("")).toBe("unplayed");
+    expect(normalizePlayState("beaten")).toBe("unplayed");
+    expect(normalizePlayState(42)).toBe("unplayed");
+  });
+});
+
+describe("playStateLabel", () => {
+  it("returns a human-readable label", () => {
+    expect(playStateLabel("unplayed")).toBe("Unplayed");
+    expect(playStateLabel("played")).toBe("Played");
+    expect(playStateLabel("completed")).toBe("Completed");
+  });
+
+  it("labels unknown values as Unplayed", () => {
+    expect(playStateLabel(null)).toBe("Unplayed");
+    expect(playStateLabel("nonsense")).toBe("Unplayed");
   });
 });

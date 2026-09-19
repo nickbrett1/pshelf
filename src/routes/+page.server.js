@@ -79,6 +79,11 @@ function slimGame(g) {
     num_editions: g.num_editions,
     purchased: g.purchased,
     igdb_id: g.igdb_id,
+    // Canonical normalized title + play state: the play-state editor needs a
+    // stable identity to write back (igdb_id when matched, normalized title
+    // otherwise) and the stored state to render.
+    normalized_title: g.normalized_title,
+    play_state: g.play_state,
     purchase_date: maxAcquisitionDate(g),
   };
 }

@@ -17,7 +17,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { parseNumber } from "../catalog.js";
+import { normalizePlayState, parseNumber } from "../catalog.js";
 const require = createRequire(import.meta.url);
 
 const DEFAULT_DB_CANDIDATES = ["catalog.db", "mailroom.db", "mailroom.db-wal"];
@@ -92,6 +92,14 @@ export function mapRow(row) {
     earliest_acquisition: row.earliest_acquisition ?? null,
     provenance: parseList(row.provenance ?? ""),
     igdb_id: row.igdb_id ?? null,
+    // Canonical (post-grouping) normalized title. Not shown, but it is the
+    // stable identity pshelf sends back when editing a game's play state (the
+    // fallback key for a game with no igdb_id yet).
+    normalized_title: row.normalized_title ?? null,
+    // User-set play state ('played' | 'unplayed' | 'completed'), edited via
+    // mailroom's manual API and read back from the catalog_games view.
+    // normalizePlayState tolerates a missing column (pre-migration store).
+    play_state: normalizePlayState(row.play_state),
   };
 }
 
