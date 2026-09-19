@@ -202,6 +202,8 @@ describe("mapRow", () => {
       earliest_acquisition: null,
       provenance: [],
       igdb_id: null,
+      normalized_title: null,
+      play_state: "unplayed",
     });
   });
 
@@ -237,6 +239,8 @@ describe("mapRow", () => {
       earliest_acquisition: null,
       provenance: [],
       igdb_id: null,
+      normalized_title: null,
+      play_state: "unplayed",
     });
   });
 
@@ -254,6 +258,26 @@ describe("mapRow", () => {
     expect(mapRow({ title: "Skyrim", is_psvr2: 0 }).psvr2).toBe(false);
     expect(mapRow({ title: "Skyrim", is_psvr2: null }).psvr2).toBe(false);
     expect(mapRow({ title: "Skyrim" }).psvr2).toBe(false);
+  });
+
+  it("maps play_state and normalized_title for the play-state editor", () => {
+    expect(
+      mapRow({
+        game_id: 7,
+        title: "Bloodborne",
+        normalized_title: "bloodborne",
+        play_state: "completed",
+      }),
+    ).toMatchObject({
+      normalized_title: "bloodborne",
+      play_state: "completed",
+    });
+    // A pre-migration store has no play_state column -> safe default.
+    expect(mapRow({ title: "Untitled" }).play_state).toBe("unplayed");
+    expect(mapRow({ title: "Untitled" }).normalized_title).toBeNull();
+    expect(mapRow({ title: "X", play_state: "bogus" }).play_state).toBe(
+      "unplayed",
+    );
   });
 
   it("parses the editions JSON column and tolerates bad/missing JSON", () => {

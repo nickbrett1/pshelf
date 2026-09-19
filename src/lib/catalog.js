@@ -259,6 +259,45 @@ function byNumber(getter, direction) {
  * @param {string} sortBy
  * @returns {Array<Object>}
  */
+// --- Play state (Played / Unplayed / Completed) ---------------------------
+//
+// A user-set per-game flag stored in mailroom's `game_play_state` table (keyed
+// by a stable game identity) and exposed on the catalog_games view. Every game
+// has exactly one of three states; a missing/unknown value (e.g. a store that
+// predates the column) is treated as the safe default "unplayed" so the UI and
+// the filter degrade gracefully.
+
+/** Canonical play-state values, in display/filter order. */
+export const PLAY_STATES = ["unplayed", "played", "completed"];
+
+/**
+ * Normalize a raw play_state value to one of PLAY_STATES. Anything missing or
+ * unrecognized (null, undefined, a legacy store without the column) becomes
+ * "unplayed".
+ * @param {*} value
+ * @returns {"unplayed"|"played"|"completed"}
+ */
+export function normalizePlayState(value) {
+  const s = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return PLAY_STATES.includes(s) ? s : "unplayed";
+}
+
+/**
+ * Human-readable label for a play state (e.g. "completed" -> "Completed").
+ * @param {*} value
+ * @returns {string}
+ */
+export function playStateLabel(value) {
+  switch (normalizePlayState(value)) {
+    case "played":
+      return "Played";
+    case "completed":
+      return "Completed";
+    default:
+      return "Unplayed";
+  }
+}
+
 export function sortGames(games, sortBy) {
   const sorted = [...games];
   switch (sortBy) {

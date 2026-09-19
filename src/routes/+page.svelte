@@ -15,6 +15,7 @@
     formatReleaseDate,
     keepIfCancelPsPlus,
     normalizePlatform,
+    normalizePlayState,
     parseNumber,
     sortGames,
   } from "$lib/catalog.js";
@@ -28,7 +29,57 @@
   let formatFilter = $state("all");
   let classFilter = $state("all");
   let genreFilter = $state("all");
+  let playFilter = $state("all");
   let sortBy = $state("purchased");
+
+  // Play state is edited in-place per card. We keep the server-provided value
+  // in `data.games[].play_state` and layer optimistic overrides on top while a
+  // save is in flight, so the card/filter update instantly and revert if the
+  // write fails. Keyed by the card's stable `key`.
+  let playOverrides = $state({});
+  let playSavingKey = $state(null);
+  let playError = $state(null);
+
+  /** Effective play state for a game (override -> server value -> 'unplayed'). */
+  function playStateOf(game) {
+    return playOverrides[game.key] ?? normalizePlayState(game.play_state);
+  }
+
+  /** Persist a play-state change for one game via the server proxy. */
+  async function setPlayState(game, state) {
+    if (state === playStateOf(game)) return;
+    const prev = playOverrides[game.key];
+    playOverrides = { ...playOverrides, [game.key]: state };
+    playSavingKey = game.key;
+    playError = null;
+    try {
+      const res = await fetch("/api/game/play-state", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          state,
+          igdb_id: game.igdb_id ?? null,
+          normalized_title: game.normalized_title ?? null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+    } catch (e) {
+      // Revert the optimistic change and surface the error.
+      const next = { ...playOverrides };
+      if (prev === undefined) {
+        delete next[game.key];
+      } else {
+        next[game.key] = prev;
+      }
+      playOverrides = next;
+      playError = `Couldn't save “${game.title}”: ${e.message ?? e}`;
+    } finally {
+      playSavingKey = null;
+    }
+  }
 
   let debounceTimer;
   function onSearchInput() {
@@ -86,6 +137,8 @@
       );
     if (genreFilter !== "all")
       games = games.filter((g) => (g.genres ?? []).includes(genreFilter));
+    if (playFilter !== "all")
+      games = games.filter((g) => playStateOf(g) === playFilter);
     return games;
   });
 
@@ -116,7 +169,8 @@
       platformFilter !== "all" ||
       formatFilter !== "all" ||
       classFilter !== "all" ||
-      genreFilter !== "all",
+      genreFilter !== "all" ||
+      playFilter !== "all",
   );
 
   const visible = $derived(
@@ -216,6 +270,7 @@
     formatFilter = "all";
     classFilter = "all";
     genreFilter = "all";
+    playFilter = "all";
     sortBy = "purchased";
   }
 </script>
@@ -325,6 +380,13 @@
           {/each}
         </select>
 
+        <select bind:value={playFilter} aria-label="Filter by play state">
+          <option value="all">All Play States</option>
+          <option value="unplayed">Unplayed</option>
+          <option value="played">Played</option>
+          <option value="completed">Completed</option>
+        </select>
+
         <select bind:value={sortBy} aria-label="Sort">
           <option value="title">Sort by Title</option>
           <option value="rating">Sort by Rating</option>
@@ -339,101 +401,125 @@
       </div>
 
       <p class="count">{sorted.length} of {data.games.length} games</p>
+      {#if playError}
+        <p class="play-error" role="alert">{playError}</p>
+      {/if}
     </section>
 
     <section class="grid">
       {#each visible as game (game.key)}
-        <button
-          type="button"
-          class="card"
-          class:expanded={expanded.has(game.id)}
-          onclick={() => toggleExpand(game.id)}
-        >
-          <GameCover {game} />
-          <div class="card-body">
-            <h3 class="title">
-              {@html highlight(game.title)}
-              {#if game.psvr2}
-                <span class="badge psvr2">PSVR2</span>
-              {/if}
-            </h3>
-            <div class="meta">
-              <span class="platform">
-                {(game.platforms ?? [])
-                  .map(normalizePlatform)
-                  .filter(Boolean)
-                  .join(" / ")}
-              </span>
-              {#if (game.formats ?? []).length}
-                <span class="format">
-                  {(game.formats ?? []).map(formatLabel).join(" / ")}
-                </span>
-              {/if}
-              {#if (game.num_editions ?? 1) > 1}
-                <span class="editions">{game.num_editions} editions</span>
-              {/if}
-            </div>
-            {#if !game.purchased}
-              <span class="badge lost">On PS+</span>
-            {/if}
-            {#if game.genres.length}
-              <p class="genres">{@html highlight(game.genres.join(", "))}</p>
-            {/if}
-            {#if game.retailer}
-              <p class="retailer">via {game.retailer}</p>
-            {/if}
-            {#if game.rating}
-              <p class="rating">★ {game.rating.toFixed(1)}</p>
-            {/if}
-            {#if expanded.has(game.id) && formatReleaseDate(game.release_ts)}
-              <p class="released">
-                Released {formatReleaseDate(game.release_ts)}
-              </p>
-            {/if}
-          </div>
-          {#if expanded.has(game.id) && (game.num_editions ?? 1) > 0}
-            <div class="editions-panel">
-              <h4>Editions</h4>
-              {#await loadEditions(game.id)}
-                <p class="editions-muted">Loading…</p>
-              {:then edRowList}
-                {#if edRowList.length}
-                  {#each edRowList as edRow (edRow.id ?? edRow.title ?? edRow)}
-                    <div class="edition">
-                      <span class="ed-title">{edRow.title ?? game.title}</span>
-                      <span class="ed-meta">
-                        {#if edRow.platform}
-                          {normalizePlatform(edRow.platform)}
-                        {/if}
-                        {#if edRow.format}{formatLabel(edRow.format)}{/if}
-                      </span>
-                      <span
-                        class="ed-class"
-                        class:owned={edRow.ownership_class === "purchased"}
-                      >
-                        {formatClass(edRow.ownership_class)}
-                      </span>
-                      {#if formatPrice(edRow.price)}
-                        <span class="ed-price">{formatPrice(edRow.price)}</span>
-                      {/if}
-                      <span class="ed-date">
-                        {formatAcquisitionDate(edRow.acquisition_date) ??
-                          "Unknown"}
-                      </span>
-                    </div>
-                  {/each}
-                {:else}
-                  <p class="editions-muted">No editions</p>
+        <div class="card-wrap">
+          <button
+            type="button"
+            class="card"
+            class:expanded={expanded.has(game.id)}
+            onclick={() => toggleExpand(game.id)}
+          >
+            <GameCover {game} />
+            <div class="card-body">
+              <h3 class="title">
+                {@html highlight(game.title)}
+                {#if game.psvr2}
+                  <span class="badge psvr2">PSVR2</span>
                 {/if}
-              {:catch err}
-                <p class="editions-error">{err.message ?? "Failed to load"}</p>
-              {/await}
+              </h3>
+              <div class="meta">
+                <span class="platform">
+                  {(game.platforms ?? [])
+                    .map(normalizePlatform)
+                    .filter(Boolean)
+                    .join(" / ")}
+                </span>
+                {#if (game.formats ?? []).length}
+                  <span class="format">
+                    {(game.formats ?? []).map(formatLabel).join(" / ")}
+                  </span>
+                {/if}
+                {#if (game.num_editions ?? 1) > 1}
+                  <span class="editions">{game.num_editions} editions</span>
+                {/if}
+              </div>
+              {#if !game.purchased}
+                <span class="badge lost">On PS+</span>
+              {/if}
+              {#if game.genres.length}
+                <p class="genres">{@html highlight(game.genres.join(", "))}</p>
+              {/if}
+              {#if game.retailer}
+                <p class="retailer">via {game.retailer}</p>
+              {/if}
+              {#if game.rating}
+                <p class="rating">★ {game.rating.toFixed(1)}</p>
+              {/if}
+              {#if expanded.has(game.id) && formatReleaseDate(game.release_ts)}
+                <p class="released">
+                  Released {formatReleaseDate(game.release_ts)}
+                </p>
+              {/if}
             </div>
-          {/if}
-          {#if expanded.has(game.id) && game.igdb_id != null}
-            <span class="igdb-id">IGDB {game.igdb_id}</span>
-          {/if}
-        </button>
+            {#if expanded.has(game.id) && (game.num_editions ?? 1) > 0}
+              <div class="editions-panel">
+                <h4>Editions</h4>
+                {#await loadEditions(game.id)}
+                  <p class="editions-muted">Loading…</p>
+                {:then edRowList}
+                  {#if edRowList.length}
+                    {#each edRowList as edRow (edRow.id ?? edRow.title ?? edRow)}
+                      <div class="edition">
+                        <span class="ed-title">{edRow.title ?? game.title}</span
+                        >
+                        <span class="ed-meta">
+                          {#if edRow.platform}
+                            {normalizePlatform(edRow.platform)}
+                          {/if}
+                          {#if edRow.format}{formatLabel(edRow.format)}{/if}
+                        </span>
+                        <span
+                          class="ed-class"
+                          class:owned={edRow.ownership_class === "purchased"}
+                        >
+                          {formatClass(edRow.ownership_class)}
+                        </span>
+                        {#if formatPrice(edRow.price)}
+                          <span class="ed-price"
+                            >{formatPrice(edRow.price)}</span
+                          >
+                        {/if}
+                        <span class="ed-date">
+                          {formatAcquisitionDate(edRow.acquisition_date) ??
+                            "Unknown"}
+                        </span>
+                      </div>
+                    {/each}
+                  {:else}
+                    <p class="editions-muted">No editions</p>
+                  {/if}
+                {:catch err}
+                  <p class="editions-error">
+                    {err.message ?? "Failed to load"}
+                  </p>
+                {/await}
+              </div>
+            {/if}
+            {#if expanded.has(game.id) && game.igdb_id != null}
+              <span class="igdb-id">IGDB {game.igdb_id}</span>
+            {/if}
+          </button>
+          <select
+            class="play-state"
+            class:played={playStateOf(game) === "played"}
+            class:completed={playStateOf(game) === "completed"}
+            value={playStateOf(game)}
+            onchange={(e) => setPlayState(game, e.currentTarget.value)}
+            disabled={playSavingKey === game.key}
+            aria-label={`Play state for ${game.title}`}
+            title="Play state"
+          >
+            <option value="unplayed">Unplayed</option>
+            <option value="played">Played</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
       {/each}
     </section>
 
@@ -620,6 +706,11 @@
     font-size: 0.9rem;
     margin-top: 10px;
   }
+  .play-error {
+    margin: 8px 0 0;
+    color: #ff8a8a;
+    font-size: 0.85rem;
+  }
 
   .grid {
     display: grid;
@@ -630,6 +721,13 @@
     text-align: center;
     padding: 24px 0;
     color: #4a5268;
+  }
+  /* Wrapper so the play-state editor can sit OUTSIDE the card <button> (an
+     interactive control nested in a button is invalid and unreliably
+     clickable). Positioned over the top-right of the cover. */
+  .card-wrap {
+    position: relative;
+    display: flex;
   }
   .card {
     background: #161a24;
@@ -653,6 +751,41 @@
   }
   .card.expanded {
     border-color: #e94560;
+  }
+  /* Per-game play-state editor (Played / Unplayed / Completed). A sibling of
+     the card button, floated over the cover's top-right corner. Colour-coded:
+     grey = unplayed (default), amber = played, green = completed. */
+  .play-state {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 5;
+    max-width: calc(100% - 16px);
+    padding: 3px 6px;
+    border-radius: 20px;
+    border: 1px solid #2f3650;
+    background: rgba(15, 17, 23, 0.88);
+    color: #aab3c8;
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+  }
+  .play-state:hover {
+    border-color: #3d4460;
+  }
+  .play-state.played {
+    color: #ffd166;
+    border-color: #6b5a2a;
+  }
+  .play-state.completed {
+    color: #7ce8b0;
+    border-color: #2f6b4d;
+  }
+  .play-state:disabled {
+    opacity: 0.6;
+    cursor: progress;
   }
   .card-body {
     padding: 12px;
