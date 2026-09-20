@@ -501,9 +501,6 @@
                 {/await}
               </div>
             {/if}
-            {#if expanded.has(game.id) && game.igdb_id != null}
-              <span class="igdb-id">IGDB {game.igdb_id}</span>
-            {/if}
           </button>
           <select
             class="play-state"
@@ -519,6 +516,25 @@
             <option value="played">Played</option>
             <option value="completed">Completed</option>
           </select>
+          <!-- "More info" link, revealed on an expanded card. It must sit
+               OUTSIDE the card <button>: an <a> is interactive content and
+               nesting it in a button is invalid (same reason the play-state
+               select lives out here). The URL is IGDB's canonical game page,
+               built server-side from the slug. -->
+          {#if expanded.has(game.id) && game.igdb_url}
+            <a
+              class="igdb-link"
+              href={game.igdb_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={game.igdb_id != null
+                ? `IGDB #${game.igdb_id}`
+                : "View on IGDB"}
+              aria-label={`More about ${game.title} on IGDB (opens in a new tab)`}
+            >
+              More info on IGDB ↗
+            </a>
+          {/if}
         </div>
       {/each}
     </section>
@@ -722,12 +738,15 @@
     padding: 24px 0;
     color: #4a5268;
   }
-  /* Wrapper so the play-state editor can sit OUTSIDE the card <button> (an
-     interactive control nested in a button is invalid and unreliably
-     clickable). Positioned over the top-right of the cover. */
+  /* Wrapper so the play-state editor and the IGDB link can sit OUTSIDE the card
+     <button> (interactive content nested in a button is invalid and
+     unreliably clickable). Column flow: card on top, the link stacked beneath;
+     the play-state editor is absolutely positioned over the cover's top-right
+     corner. */
   .card-wrap {
     position: relative;
     display: flex;
+    flex-direction: column;
   }
   .card {
     background: #161a24;
@@ -923,16 +942,19 @@
     color: #6b7488;
   }
 
-  /* Discreet IGDB id, shown bottom-right of an expanded card — a debug aid
-     (e.g. for the mailroom game-splitting bug) without cluttering the grid. */
-  .igdb-id {
-    margin-left: auto;
-    margin-top: auto;
-    padding: 3px 10px 6px;
-    font-size: 0.62rem;
-    color: #4a5268;
-    letter-spacing: 0.04em;
-    user-select: all;
+  /* "More info on IGDB" link, shown under an expanded card. Discreet and
+     right-aligned so it doesn't compete with the cover art or the grid. */
+  .igdb-link {
+    align-self: flex-end;
+    margin-top: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #8ea2ff;
+    text-decoration: none;
+  }
+  .igdb-link:hover {
+    color: #b3c1ff;
+    text-decoration: underline;
   }
 
   /* Desktop: exactly 3 covers per row (requested). Phones/tablets stay at the

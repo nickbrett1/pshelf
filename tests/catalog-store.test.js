@@ -202,6 +202,7 @@ describe("mapRow", () => {
       earliest_acquisition: null,
       provenance: [],
       igdb_id: null,
+      igdb_url: null,
       normalized_title: null,
       play_state: "unplayed",
     });
@@ -239,8 +240,63 @@ describe("mapRow", () => {
       earliest_acquisition: null,
       provenance: [],
       igdb_id: null,
+      igdb_url: null,
       normalized_title: null,
       play_state: "unplayed",
+    });
+  });
+
+  // IGDB pages are slug-based; the id alone is not a URL. The read model
+  // exposes igdb_url/igdb_slug (preferred), with a fallback to the raw
+  // igdb_payload for stores that predate those columns.
+  describe("igdb_url (canonical IGDB page)", () => {
+    const PORTAL_2 = "https://www.igdb.com/games/portal-2";
+    const BLOODBORNE = "https://www.igdb.com/games/bloodborne";
+
+    it("uses the read model's igdb_url when present", () => {
+      expect(
+        mapRow({
+          title: "Portal 2",
+          igdb_id: 1020,
+          igdb_url: PORTAL_2,
+        }).igdb_url,
+      ).toBe(PORTAL_2);
+    });
+
+    it("builds the URL from igdb_slug when there's no igdb_url", () => {
+      expect(
+        mapRow({ title: "Bloodborne", igdb_slug: "bloodborne" }).igdb_url,
+      ).toBe(BLOODBORNE);
+    });
+
+    it("falls back to the raw payload (pre-migration store)", () => {
+      // payload.url is IGDB's own field.
+      expect(
+        mapRow({
+          igdb_payload: JSON.stringify({
+            id: 1020,
+            slug: "portal-2",
+            url: PORTAL_2,
+          }),
+        }).igdb_url,
+      ).toBe(PORTAL_2);
+      // payload with only a slug -> constructed.
+      expect(
+        mapRow({
+          igdb_payload: JSON.stringify({ id: 7334, slug: "bloodborne" }),
+        }).igdb_url,
+      ).toBe(BLOODBORNE);
+    });
+
+    it("nulls the URL when the game is unmatched or the data is junk", () => {
+      expect(mapRow({ title: "Unmatched" }).igdb_url).toBeNull();
+      expect(mapRow({ title: "No slug", igdb_id: 5 }).igdb_url).toBeNull();
+      expect(
+        mapRow({ title: "Bad", igdb_payload: "not json" }).igdb_url,
+      ).toBeNull();
+      expect(
+        mapRow({ title: "Empty", igdb_url: "   ", igdb_slug: "" }).igdb_url,
+      ).toBeNull();
     });
   });
 

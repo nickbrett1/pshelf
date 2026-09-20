@@ -92,6 +92,11 @@ export function mapRow(row) {
     earliest_acquisition: row.earliest_acquisition ?? null,
     provenance: parseList(row.provenance ?? ""),
     igdb_id: row.igdb_id ?? null,
+    // Canonical IGDB page URL for the expanded card's "more info" link
+    // (memos/igdb-page-link). IGDB pages are *slug*-based, so the id alone
+    // can't form one; the read model surfaces igdb_url/igdb_slug. Null when the
+    // game is unmatched (UI hides the link).
+    igdb_url: igdbPageUrl(row),
     // Canonical (post-grouping) normalized title. Not shown, but it is the
     // stable identity pshelf sends back when editing a game's play state (the
     // fallback key for a game with no igdb_id yet).
@@ -101,6 +106,50 @@ export function mapRow(row) {
     // normalizePlayState tolerates a missing column (pre-migration store).
     play_state: normalizePlayState(row.play_state),
   };
+}
+
+/** Trimmed string or null (so "" / whitespace counts as absent). */
+function strOrNull(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+/** Build the canonical IGDB page URL from a slug. */
+function igdbUrlFromSlug(slug) {
+  return slug ? `https://www.igdb.com/games/${slug}` : null;
+}
+
+/** Parse the raw IGDB payload column, tolerating a missing/malformed value. */
+function parseIgdbPayload(value) {
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Canonical IGDB page URL for a mapped row, or null when the game is unmatched.
+ *
+ * IGDB URLs are slug-based (`https://www.igdb.com/games/<slug>`) — a numeric id
+ * is not a URL — so the read model exposes `igdb_url`/`igdb_slug` (see
+ * mailroom's catalog_games view). For a store that predates those columns we
+ * fall back to the raw `igdb_payload` already on the row (which has always
+ * carried `url`/`slug`), so the link works before the mailroom change deploys.
+ * @param {Record<string, any>} row
+ * @returns {string|null}
+ */
+function igdbPageUrl(row) {
+  const direct =
+    strOrNull(row.igdb_url) ?? igdbUrlFromSlug(strOrNull(row.igdb_slug));
+  if (direct) return direct;
+
+  const payload = parseIgdbPayload(row.igdb_payload);
+  if (!payload) return null;
+  return strOrNull(payload.url) ?? igdbUrlFromSlug(strOrNull(payload.slug));
 }
 
 function parseList(value) {
