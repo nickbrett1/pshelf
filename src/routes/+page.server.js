@@ -79,6 +79,9 @@ function slimGame(g) {
     num_editions: g.num_editions,
     purchased: g.purchased,
     igdb_id: g.igdb_id,
+    // Canonical IGDB page URL for the expanded card's "more info" link (see
+    // mapRow). One small string; the raw IGDB payload never leaves the server.
+    igdb_url: g.igdb_url,
     // Canonical normalized title + play state: the play-state editor needs a
     // stable identity to write back (igdb_id when matched, normalized title
     // otherwise) and the stored state to render.
