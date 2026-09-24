@@ -181,16 +181,23 @@ export async function getPsnCredential({ timeout = 8000 } = {}) {
 
 /**
  * Submit a fresh NPSSO to refresh the PSN credential.
+ *
+ * mailroom exchanges the NPSSO synchronously and that exchange is SLOW: it
+ * follows the whole Sony authorize redirect chain (up to ~10 hops) and then
+ * posts to the token endpoint. The old 15s cap could abort a successful
+ * exchange mid-flight — the write never landed, yet the UI could look like it
+ * "did something" (this is how a paste on 2026-09-23 left the credential
+ * untouched). Give it a generous budget so a slow-but-good token completes.
  * @param {string} npsso
  * @returns {Promise<{ok: boolean, error?: string, status?: string}>}
  */
-export async function submitPsnCredential(npsso) {
+export async function submitPsnCredential(npsso, { timeout = 60000 } = {}) {
   try {
     const res = await fetch(`${MANUAL_API}/manual/psn-credential`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ npsso }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(timeout),
     });
     if (!res.ok) {
       const text = await res.text();

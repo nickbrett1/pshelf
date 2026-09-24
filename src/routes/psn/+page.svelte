@@ -4,13 +4,19 @@
 
   let { data } = $props();
 
-  const status = $derived(data.status);
+  // Last action-verified status. It wins over `data.status` until the next
+  // server load lands, so the badge flips the instant the POST resolves
+  // instead of waiting for invalidateAll() — and we never claim success while
+  // the banner would still read needs_refresh.
+  let actionStatus = $state(null);
+  const status = $derived(actionStatus ?? data.status);
   const valid = $derived(status.status === "valid");
   const needsRefresh = $derived(!valid);
 
   let npsso = $state("");
   let error = $state("");
   let success = $state("");
+  let verifying = $state(false);
 
   // Back to wherever the user came from (normally the catalog). Falls back to
   // the catalog home when this page was opened directly, e.g. PWA launched
@@ -24,23 +30,35 @@
   }
 
   function onSubmit() {
-    // use:enhance calls `submit` with the submit options and expects a function
-    // back that runs once the server responds — that's where `result` lives.
-    // Treating the submit options as `{ result }` made `result` undefined and
-    // the handler threw before the POST was ever sent (no feedback, stale
-    // credential).
+    // use:enhance runs this body before the POST, then the returned function
+    // once the server responds. `verifying` drives the button state so the
+    // user gets feedback during the (multi-second) Sony exchange.
+    verifying = true;
+    // use:enhance calls the returned function with the submit options and
+    // expects a function back that runs once the server responds — that's
+    // where `result` lives. Treating the submit options as `{ result }` made
+    // `result` undefined and the handler threw before the POST was ever sent
+    // (no feedback, stale credential).
     return async ({ result }) => {
+      verifying = false;
+      // The action returns the freshly-read credential status with both
+      // outcomes, so we can show the authoritative verdict right away.
       if (result.type === "failure") {
         error = result.data?.error ?? "Refresh failed.";
         success = "";
       } else {
-        success = "Credential refreshed ✓";
+        success =
+          "Validated — mailroom accepted the NPSSO and the credential is now valid ✓";
         error = "";
-        // Re-run the page load in place so Last success/Last error/Expires and
-        // the status badge update without a redirect (which would add a
-        // duplicate /psn history entry and break the Back button).
-        await invalidateAll();
+        npsso = "";
       }
+      if (result.data?.status) actionStatus = result.data.status;
+      // Re-run the page load in place so Last success/Last error/Expires and
+      // the status badge update without a redirect (which would add a
+      // duplicate /psn history entry and break the Back button).
+      await invalidateAll();
+      // Server data is now authoritative again — drop the action override.
+      actionStatus = null;
     };
   }
 
@@ -97,6 +115,20 @@
     </dl>
   </section>
 
+  <!-- Verdict from the refresh action, shown here (outside the refresh card)
+       so it stays visible after a successful refresh makes the card
+       disappear. -->
+  {#if error}
+    <section class="card feedback">
+      <p class="error">{error}</p>
+    </section>
+  {/if}
+  {#if success}
+    <section class="card feedback">
+      <p class="ok">{success}</p>
+    </section>
+  {/if}
+
   {#if needsRefresh}
     <section class="card">
       <h2>Refresh with NPSSO</h2>
@@ -109,7 +141,9 @@
           > while signed in.
         </li>
         <li>Copy the <code>npsso</code> value from the response.</li>
-        <li>Paste it below and hit Refresh.</li>
+        <li>
+          Paste it below and hit Refresh — mailroom validates it immediately.
+        </li>
       </ol>
 
       <form method="POST" action="?/refresh" use:enhance={onSubmit}>
@@ -118,17 +152,15 @@
           id="npsso"
           name="npsso"
           bind:value={npsso}
+          disabled={verifying}
           rows="3"
           placeholder="np_..."
           autocomplete="off"
           spellcheck="false"></textarea>
-        <button type="submit" disabled={!npsso.trim()}
-          >Refresh credential</button
-        >
+        <button type="submit" disabled={!npsso.trim() || verifying}>
+          {verifying ? "Verifying with PSN…" : "Refresh credential"}
+        </button>
       </form>
-
-      {#if error}<p class="error">{error}</p>{/if}
-      {#if success}<p class="ok">{success}</p>{/if}
     </section>
   {/if}
 </main>
