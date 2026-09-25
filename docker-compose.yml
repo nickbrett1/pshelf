@@ -22,6 +22,12 @@ services:
       # (genproj never commits secrets). See .env.example.
       MANUAL_API_URL: ${MANUAL_API_URL}
       IGDB_API_URL: ${IGDB_API_URL}
+      # adapter-node assumes the public origin is https:// unless told
+      # otherwise. When this container is served over plain HTTP, ORIGIN must be
+      # pinned to the browser-visible URL (e.g. http://nas:3005) — otherwise
+      # SvelteKit's CSRF check sees every form POST (like the /psn NPSSO paste)
+      # as cross-site and rejects it with 403 before the action ever runs.
+      ORIGIN: ${ORIGIN}
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "homepage.group=Services"

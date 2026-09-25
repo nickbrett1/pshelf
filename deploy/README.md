@@ -51,6 +51,24 @@ with the registry credentials:
 
 For non-Synology hosts: `docker compose up -d`.
 
+### `ORIGIN` is required on plain-HTTP deployments
+
+adapter-node assumes the public origin is `https://` unless a proxy protocol
+header says otherwise. On a deployment served over plain HTTP the unset default
+makes SvelteKit's CSRF check treat every form POST as cross-site, and it rejects
+them with **403 "Cross-site POST form submissions are forbidden"** _before the
+action runs_. Symptom: a form (e.g. the `/psn` NPSSO paste) silently does
+nothing — no request, no error, nothing written.
+
+Set `ORIGIN` in `.env` to the exact URL the browser uses, **scheme included**:
+
+```
+ORIGIN=http://<hostname>:3005
+```
+
+If pshelf later sits behind TLS, change it to `https://…` to match. Serving over
+two different hostnames at once is not supported by a single `ORIGIN`.
+
 ## 3. Auto-updates with Watchtower (poll model)
 
 Watchtower on the NAS polls the registry and recreates the container when the
