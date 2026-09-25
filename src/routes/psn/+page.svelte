@@ -47,14 +47,23 @@
       try {
         // The action returns the freshly-read credential status with both
         // outcomes, so we can show the authoritative verdict right away.
-        if (result.type === "failure") {
-          error = result.data?.error ?? "Refresh failed.";
-          success = "";
-        } else {
+        //
+        // Only a real `success` may claim success. Testing `!== "failure"`
+        // instead was a lie: an intercepted/rejected POST (e.g. a CSRF 403,
+        // whose body is `{"message":…}` with no `type`) fell through to the
+        // success branch and told the user mailroom had accepted a token that
+        // never left the browser.
+        if (result.type === "success") {
           success =
             "Validated — mailroom accepted the NPSSO and the credential is now valid ✓";
           error = "";
           npsso = "";
+        } else {
+          error =
+            result.data?.error ??
+            result.error?.message ??
+            "Refresh failed — please try again.";
+          success = "";
         }
         if (result.data?.status) actionStatus = result.data.status;
         // Re-run the page load in place so Last success/Last error/Expires and
