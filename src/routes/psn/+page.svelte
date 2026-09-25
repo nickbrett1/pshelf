@@ -154,7 +154,7 @@
           bind:value={npsso}
           disabled={verifying}
           rows="3"
-          placeholder="np_..."
+          placeholder="Paste the npsso value (long token, no prefix)"
           autocomplete="off"
           spellcheck="false"></textarea>
         <button type="submit" disabled={!npsso.trim() || verifying}>
