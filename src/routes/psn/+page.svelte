@@ -40,25 +40,32 @@
     // `result` undefined and the handler threw before the POST was ever sent
     // (no feedback, stale credential).
     return async ({ result }) => {
-      verifying = false;
-      // The action returns the freshly-read credential status with both
-      // outcomes, so we can show the authoritative verdict right away.
-      if (result.type === "failure") {
-        error = result.data?.error ?? "Refresh failed.";
-        success = "";
-      } else {
-        success =
-          "Validated — mailroom accepted the NPSSO and the credential is now valid ✓";
-        error = "";
-        npsso = "";
+      // `finally` so a throw in here can never leave the form wedged with
+      // `verifying` stuck true — which disables the textarea + button and makes
+      // every later attempt a silent no-op (the request never leaves the
+      // browser, so nothing is written anywhere).
+      try {
+        // The action returns the freshly-read credential status with both
+        // outcomes, so we can show the authoritative verdict right away.
+        if (result.type === "failure") {
+          error = result.data?.error ?? "Refresh failed.";
+          success = "";
+        } else {
+          success =
+            "Validated — mailroom accepted the NPSSO and the credential is now valid ✓";
+          error = "";
+          npsso = "";
+        }
+        if (result.data?.status) actionStatus = result.data.status;
+        // Re-run the page load in place so Last success/Last error/Expires and
+        // the status badge update without a redirect (which would add a
+        // duplicate /psn history entry and break the Back button).
+        await invalidateAll();
+      } finally {
+        verifying = false;
+        // Server data is now authoritative again — drop the action override.
+        actionStatus = null;
       }
-      if (result.data?.status) actionStatus = result.data.status;
-      // Re-run the page load in place so Last success/Last error/Expires and
-      // the status badge update without a redirect (which would add a
-      // duplicate /psn history entry and break the Back button).
-      await invalidateAll();
-      // Server data is now authoritative again — drop the action override.
-      actionStatus = null;
     };
   }
 
