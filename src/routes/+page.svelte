@@ -13,6 +13,7 @@
     filterGames,
     formatAcquisitionDate,
     formatReleaseDate,
+    formatTimeToBeat,
     keepIfCancelPsPlus,
     normalizePlatform,
     normalizePlayState,
@@ -263,6 +264,25 @@
     return n == null ? null : `$${n.toFixed(2)}`;
   }
 
+  // The three IGDB/HowLongToBeat estimates for a game, in display order, with
+  // their human labels and formatted durations. Rows with no value are
+  // dropped, so an empty array means "no time-to-beat data" (the card hides
+  // the whole section). Explicit access (not a computed key) because the
+  // security lint flags dynamic property access.
+  function timeToBeatBreakdown(game) {
+    return [
+      { label: "Main", value: formatTimeToBeat(game.time_to_beat_hastily) },
+      {
+        label: "Main + Extra",
+        value: formatTimeToBeat(game.time_to_beat_normally),
+      },
+      {
+        label: "100%",
+        value: formatTimeToBeat(game.time_to_beat_completely),
+      },
+    ].filter((row) => row.value);
+  }
+
   function resetFilters() {
     query = "";
     debouncedQuery = "";
@@ -390,6 +410,7 @@
         <select bind:value={sortBy} aria-label="Sort">
           <option value="title">Sort by Title</option>
           <option value="rating">Sort by Rating</option>
+          <option value="time_asc">Time to Beat: Shortest</option>
           <option value="purchased">Sort by Purchase Date</option>
           <option value="released_desc">Release Date: Newest</option>
           <option value="released_asc">Release Date: Oldest</option>
@@ -448,6 +469,11 @@
               {#if game.retailer}
                 <p class="retailer">via {game.retailer}</p>
               {/if}
+              {#if formatTimeToBeat(game.time_to_beat_normally)}
+                <p class="ttb">
+                  ~{formatTimeToBeat(game.time_to_beat_normally)} to beat
+                </p>
+              {/if}
               {#if game.rating}
                 <p class="rating">★ {game.rating.toFixed(1)}</p>
               {/if}
@@ -455,6 +481,13 @@
                 <p class="released">
                   Released {formatReleaseDate(game.release_ts)}
                 </p>
+              {/if}
+              {#if expanded.has(game.id) && timeToBeatBreakdown(game).length}
+                <div class="ttb-breakdown">
+                  {#each timeToBeatBreakdown(game) as row (row.label)}
+                    <span>{row.label} ~{row.value}</span>
+                  {/each}
+                </div>
               {/if}
             </div>
             {#if expanded.has(game.id) && (game.num_editions ?? 1) > 0}
@@ -867,6 +900,29 @@
     color: #ffd166;
     font-size: 0.85rem;
     font-weight: 600;
+  }
+
+  /* Time-to-beat (IGDB/HowLongToBeat): the `normally` (Main + Extra) estimate
+     on the card, with the full Main / Main + Extra / 100% breakdown on expand.
+     "~" marks the community-average nature of the values. */
+  .ttb {
+    margin: 0;
+    color: #8fb3c9;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .ttb-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .ttb-breakdown span {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #1c2836;
+    color: #9fc3dc;
   }
 
   /* "On PS+" indicator — only shown when the game would be LOST if PS+ is

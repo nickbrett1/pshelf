@@ -46,6 +46,12 @@ function slimGame(g) {
     // Release date (epoch seconds) as a sort key and for the expanded-card
     // "Released <date>" line — see note in catalog-store's mapRow.
     release_ts: g.release_ts,
+    // IGDB/HowLongToBeat time-to-beat (integer SECONDS): the card shows the
+    // `normally` (Main + Extra) value and expands to the full breakdown; the
+    // "Time to Beat: Shortest" sort keys off `normally`. Null when unavailable.
+    time_to_beat_hastily: g.time_to_beat_hastily,
+    time_to_beat_normally: g.time_to_beat_normally,
+    time_to_beat_completely: g.time_to_beat_completely,
     price: g.price,
     num_editions: g.num_editions,
     purchased: g.purchased,

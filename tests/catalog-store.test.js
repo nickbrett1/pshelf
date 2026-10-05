@@ -185,6 +185,9 @@ describe("mapRow", () => {
       cover: "/covers/ai.jpg",
       rating: 90,
       release_ts: 1412640000,
+      time_to_beat_hastily: null,
+      time_to_beat_normally: null,
+      time_to_beat_completely: null,
       genres: ["Survival Horror"],
       psvr2: false,
       editions: [
@@ -233,6 +236,9 @@ describe("mapRow", () => {
       cover: "/covers/h.jpg",
       rating: 89,
       release_ts: 1488240000,
+      time_to_beat_hastily: null,
+      time_to_beat_normally: null,
+      time_to_beat_completely: null,
       genres: ["Action RPG"],
       psvr2: false,
       editions: [],
@@ -314,6 +320,23 @@ describe("mapRow", () => {
     expect(mapRow({ title: "Skyrim", is_psvr2: 0 }).psvr2).toBe(false);
     expect(mapRow({ title: "Skyrim", is_psvr2: null }).psvr2).toBe(false);
     expect(mapRow({ title: "Skyrim" }).psvr2).toBe(false);
+  });
+
+  it("maps the three IGDB time-to-beat columns, nulling absent values", () => {
+    const mapped = mapRow({
+      title: "Bloodborne",
+      time_to_beat_hastily: 126000,
+      time_to_beat_normally: 189000,
+      time_to_beat_completely: 288000,
+    });
+    expect(mapped.time_to_beat_hastily).toBe(126000);
+    expect(mapped.time_to_beat_normally).toBe(189000);
+    expect(mapped.time_to_beat_completely).toBe(288000);
+
+    const none = mapRow({ title: "Unmeasured" });
+    expect(none.time_to_beat_hastily).toBeNull();
+    expect(none.time_to_beat_normally).toBeNull();
+    expect(none.time_to_beat_completely).toBeNull();
   });
 
   it("maps play_state and normalized_title for the play-state editor", () => {

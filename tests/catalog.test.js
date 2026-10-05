@@ -10,6 +10,7 @@ import {
   parseNumber,
   sortGames,
   formatReleaseDate,
+  formatTimeToBeat,
 } from "../src/lib/catalog.js";
 
 const games = [
@@ -328,6 +329,43 @@ describe("sortGames", () => {
     });
   });
 
+  describe("time to beat (IGDB normally / Main + Extra)", () => {
+    const input = [
+      g("Long", { time_to_beat_normally: 3600 * 60 }), // 60h
+      g("Unknown"),
+      g("Short", { time_to_beat_normally: 3600 * 8 }), // 8h
+      g("Mid", { time_to_beat_normally: 3600 * 25 }), // 25h
+    ];
+
+    it("shortest first, unknown last", () => {
+      expect(titles(sortGames(input, "time_asc"))).toEqual([
+        "Short",
+        "Mid",
+        "Long",
+        "Unknown",
+      ]);
+    });
+
+    it("keys off `normally`, ignoring the other estimates", () => {
+      const onlyHastily = [
+        g("NoNormally", { time_to_beat_hastily: 3600 }),
+        g("HasNormally", { time_to_beat_normally: 3600 * 30 }),
+      ];
+      expect(titles(sortGames(onlyHastily, "time_asc"))).toEqual([
+        "HasNormally",
+        "NoNormally",
+      ]);
+    });
+
+    it("coerces numeric strings (SQLite may hand back text)", () => {
+      const withString = [
+        g("Str", { time_to_beat_normally: "18000" }),
+        g("Num", { time_to_beat_normally: 9000 }),
+      ];
+      expect(titles(sortGames(withString, "time_asc"))).toEqual(["Num", "Str"]);
+    });
+  });
+
   it("preserves incoming order for an unknown dimension", () => {
     const input = [g("B"), g("A")];
     expect(titles(sortGames(input, "nonsense"))).toEqual(["B", "A"]);
@@ -397,6 +435,29 @@ describe("formatReleaseDate", () => {
     expect(formatReleaseDate("")).toBeNull();
     expect(formatReleaseDate(0)).toBeNull();
     expect(formatReleaseDate("not a date")).toBeNull();
+  });
+});
+
+describe("formatTimeToBeat", () => {
+  it("formats seconds into hours and minutes", () => {
+    expect(formatTimeToBeat(3600 * 12 + 60 * 30)).toBe("12h 30m");
+    expect(formatTimeToBeat(3600 * 25)).toBe("25h");
+  });
+
+  it("formats sub-hour durations as minutes", () => {
+    expect(formatTimeToBeat(60 * 45)).toBe("45m");
+  });
+
+  it("accepts numeric strings (SQLite may hand back text)", () => {
+    expect(formatTimeToBeat("7200")).toBe("2h");
+  });
+
+  it("returns null for missing/zero/garbage values", () => {
+    expect(formatTimeToBeat(null)).toBeNull();
+    expect(formatTimeToBeat(undefined)).toBeNull();
+    expect(formatTimeToBeat("")).toBeNull();
+    expect(formatTimeToBeat(0)).toBeNull();
+    expect(formatTimeToBeat("not a time")).toBeNull();
   });
 });
 

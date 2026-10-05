@@ -9,12 +9,14 @@ mailroom's manual-edit API (single-writer rule).
 ## Features
 
 - **Catalog grid** — owned games with title, platform, format, ownership
-  class, retailer, cover art, genres and IGDB rating.
+  class, retailer, cover art, genres, IGDB rating and time to beat.
 - **Instant search** — client-side, debounced free-text filter over the
   in-memory catalog (title, genre, platform, retailer) with highlighted matches.
 - **Filter & sort** — filter by platform, format, ownership class and genre;
-  sort by title, rating, purchase date, release date (newest/oldest) or price
-  (cheapest/most expensive). Expanding a card shows the game's release date.
+  sort by title, rating, time to beat (shortest first), purchase date, release
+  date (newest/oldest) or price (cheapest/most expensive). Expanding a card
+  shows the game's release date and the full Main / Main + Extra / 100%
+  time-to-beat breakdown.
 - **"Keep if I cancel PS+"** split — at-a-glance count of titles that survive
   dropping the PS+ subscription.
 

@@ -80,6 +80,13 @@ export function mapRow(row) {
     // alone was why "Sort by Release Year" silently did nothing: the column
     // never existed.)
     release_ts: parseNumber(row.release_ts),
+    // IGDB/HowLongToBeat time-to-beat, integer SECONDS (null when IGDB has no
+    // data). Sorting uses `time_to_beat_normally` (IGDB "normally" = Main +
+    // Extra); the card also shows the full hastily/normally/completely
+    // breakdown. Exposed by mailroom's catalog_games/catalog_views views.
+    time_to_beat_hastily: parseNumber(row.time_to_beat_hastily),
+    time_to_beat_normally: parseNumber(row.time_to_beat_normally),
+    time_to_beat_completely: parseNumber(row.time_to_beat_completely),
     genres: parseList(row.genres ?? row.genre ?? ""),
     // PSVR2 flag from catalog_games/catalog_views is_psvr2 (IGDB platform
     // 390). A category flag, not a platform — PSVR2 games run on PS5, so the

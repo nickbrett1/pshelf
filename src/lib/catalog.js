@@ -222,6 +222,28 @@ export function formatReleaseDate(value) {
 }
 
 /**
+ * Format an IGDB/HowLongToBeat time-to-beat value (integer SECONDS) as a
+ * compact human duration: "12h 30m" / "45m" / "2h". The values are community
+ * averages, so the UI prefixes them with "~"; this returns null for
+ * missing/zero/unparseable values so the caller can hide the line entirely.
+ * (The underlying field is `*_normally`/`*_hastily`/`*_completely` — IGDB's
+ * Main + Extra / Main Story / 100% completion estimates.)
+ * @param {number|string|null|undefined} value seconds
+ * @returns {string|null}
+ */
+export function formatTimeToBeat(value) {
+  const seconds = parseNumber(value);
+  if (seconds == null || seconds <= 0) return null;
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes <= 0) return null;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+/**
  * Comparator factory for a numeric field: known values sort first in the
  * requested direction, unknown (null) values always sink to the bottom.
  * Ascending uses `?? Infinity` so a null-release/price game lands last;
@@ -254,6 +276,8 @@ function byNumber(getter, direction) {
  *   released_asc   — oldest release date first
  *   price_asc      — cheapest first
  *   price_desc     — most expensive first
+ *   time_asc       — shortest time to beat first (IGDB "normally" /
+ *                    Main + Extra); games with no time-to-beat sort last
  * Anything else preserves the incoming order.
  * @param {Array<Object>} games
  * @param {string} sortBy
@@ -321,6 +345,13 @@ export function sortGames(games, sortBy) {
       return sorted.sort(byNumber((g2) => parseNumber(g2.price), "asc"));
     case "price_desc":
       return sorted.sort(byNumber((g2) => parseNumber(g2.price), "desc"));
+    case "time_asc":
+      // Sort on the `normally` estimate (Main + Extra) — the headline
+      // completion time. Unknown slots to the bottom like every other numeric
+      // dimension, so un-measured games never top "Shortest first".
+      return sorted.sort(
+        byNumber((g2) => parseNumber(g2.time_to_beat_normally), "asc"),
+      );
     default:
       return sorted;
   }
