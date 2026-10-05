@@ -1,6 +1,14 @@
 # Git, Code Review, and Deployment Rules
 
-- **No Git Commits**: Never run `git commit` to package changes. Always leave files modified in the working directory (unstaged or staged).
-- **No Git Pushes**: Never run `git push` to push local branch commits to any remote repository.
-- **No Deployments**: Never run `wrangler deploy`, `npm run deploy`, or any other deployment command to push code to the production/default environment.
-- **Goal**: Keep all modifications fully visible in the local git working directory so the user can easily review the side-by-side diffs in the VS Code Source Control view before staging, committing, pushing, or deploying them manually.
+- **Commits are allowed**: You may run `git commit` to package changes. Keep
+  commits scoped to the task and use clear, conventional commit messages
+  (`feat:`, `fix:`, `chore:`, ...).
+- **Pushes are allowed**: You may run `git push` to push local commits to the
+  remote. Prefer the repo's normal branch/PR convention (a feature branch + PR)
+  over pushing straight to the default branch; if you do push to a protected
+  branch, note any bypassed status checks to the user.
+- **No Deployments**: Never run `wrangler deploy`, `npm run deploy`, or any other
+  deployment command to push code to the production/default environment.
+- **Goal**: Land changes through commits (and pushes/PRs when requested) while
+  keeping diffs reviewable in VS Code — a reviewable commit history, not an
+  unexplained batch.
