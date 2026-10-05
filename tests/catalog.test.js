@@ -346,6 +346,15 @@ describe("sortGames", () => {
       ]);
     });
 
+    it("longest first, unknown last", () => {
+      expect(titles(sortGames(input, "time_desc"))).toEqual([
+        "Long",
+        "Mid",
+        "Short",
+        "Unknown",
+      ]);
+    });
+
     it("keys off `normally`, ignoring the other estimates", () => {
       const onlyHastily = [
         g("NoNormally", { time_to_beat_hastily: 3600 }),

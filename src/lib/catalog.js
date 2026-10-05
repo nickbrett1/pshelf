@@ -278,6 +278,7 @@ function byNumber(getter, direction) {
  *   price_desc     — most expensive first
  *   time_asc       — shortest time to beat first (IGDB "normally" /
  *                    Main + Extra); games with no time-to-beat sort last
+ *   time_desc      — longest time to beat first; unknown still sorts last
  * Anything else preserves the incoming order.
  * @param {Array<Object>} games
  * @param {string} sortBy
@@ -351,6 +352,11 @@ export function sortGames(games, sortBy) {
       // dimension, so un-measured games never top "Shortest first".
       return sorted.sort(
         byNumber((g2) => parseNumber(g2.time_to_beat_normally), "asc"),
+      );
+    case "time_desc":
+      // Longest first; unknown (no time-to-beat) still sinks to the bottom.
+      return sorted.sort(
+        byNumber((g2) => parseNumber(g2.time_to_beat_normally), "desc"),
       );
     default:
       return sorted;

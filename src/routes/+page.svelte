@@ -411,6 +411,7 @@
           <option value="title">Sort by Title</option>
           <option value="rating">Sort by Rating</option>
           <option value="time_asc">Time to Beat: Shortest</option>
+          <option value="time_desc">Time to Beat: Longest</option>
           <option value="purchased">Sort by Purchase Date</option>
           <option value="released_desc">Release Date: Newest</option>
           <option value="released_asc">Release Date: Oldest</option>
