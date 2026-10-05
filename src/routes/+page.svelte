@@ -408,15 +408,15 @@
         </select>
 
         <select bind:value={sortBy} aria-label="Sort">
-          <option value="title">Sort by Title</option>
-          <option value="rating">Sort by Rating</option>
-          <option value="time_asc">Time to Beat: Shortest</option>
-          <option value="time_desc">Time to Beat: Longest</option>
-          <option value="purchased">Sort by Purchase Date</option>
-          <option value="released_desc">Release Date: Newest</option>
-          <option value="released_asc">Release Date: Oldest</option>
           <option value="price_asc">Price: Cheapest</option>
           <option value="price_desc">Price: Most Expensive</option>
+          <option value="purchased">Purchase Date: Newest</option>
+          <option value="rating">Rating: Highest</option>
+          <option value="released_desc">Release Date: Newest</option>
+          <option value="released_asc">Release Date: Oldest</option>
+          <option value="time_desc">Time to Beat: Longest</option>
+          <option value="time_asc">Time to Beat: Shortest</option>
+          <option value="title">Title: A→Z</option>
         </select>
 
         <button class="reset" onclick={resetFilters}>Reset</button>

@@ -98,7 +98,7 @@ export function keepIfCancelPsPlus(games) {
  * ISO ("2026-05-05", used by PSN sync), US month-name ("Nov 27, 2024",
  * "Wednesday, November 27, 2024") and US numeric ("05/08/2021"). String
  * comparison on those is wrong ("Nov" > "July" alphabetically), which broke
- * "Sort by Purchase Date". So we normalize every format to a comparable
+ * the "Purchase Date: Newest" sort. So we normalize every format to a comparable
  * YYYYMMDD number (e.g. 20260505), reading local date parts so a UTC-parsed
  * date can't shift a day under a local timezone. A single scale for all
  * formats is essential: an earlier design returned epoch-millis for non-ISO

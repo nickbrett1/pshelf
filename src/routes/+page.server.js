@@ -4,8 +4,8 @@ import { parseAcquisitionDate } from "$lib/catalog.js";
 
 /**
  * Latest acquisition/purchase date for a game, as a sortable number (null when
- * unknown). Mirrors the old client-side `purchaseDate()` logic so the "Sort by
- * Purchase Date" order is unchanged — but computed on the server so the client
+ * unknown). Mirrors the old client-side `purchaseDate()` logic so the
+ * "Purchase Date: Newest" order is unchanged — but computed on the server so the client
  * doesn't need every game's `editions` array just to sort.
  * @param {Object} g full mapped catalog row
  * @returns {number|null}
@@ -24,7 +24,7 @@ function maxAcquisitionDate(g) {
  * The per-game `editions` arrays (the largest slice of the old payload) are
  * deliberately NOT shipped here — they're only shown when a card is expanded,
  * so they're lazy-loaded on demand via /api/game/[id]/editions. We ship a
- * precomputed `purchase_date` sort key instead so "Sort by Purchase Date"
+ * precomputed `purchase_date` sort key instead so "Purchase Date: Newest"
  * keeps working. Other unused fields (`year`, top-level `price`, `provenance`)
  * are dropped too. See memo "Pshelf slow to load".
  * @param {Object} g mapped catalog row (see mapRow)
