@@ -7,8 +7,10 @@
   remote. Prefer the repo's normal branch/PR convention (a feature branch + PR)
   over pushing straight to the default branch; if you do push to a protected
   branch, note any bypassed status checks to the user.
-- **No Deployments**: Never run `wrangler deploy`, `npm run deploy`, or any other
-  deployment command to push code to the production/default environment.
-- **Goal**: Land changes through commits (and pushes/PRs when requested) while
-  keeping diffs reviewable in VS Code — a reviewable commit history, not an
-  unexplained batch.
+- **Deployments are allowed**: You may run deployment commands (e.g.
+  `wrangler deploy`, `npm run deploy`) when asked, including to a
+  production/default environment. Prefer the repo's standard CI/CD pipeline
+  where one exists, and tell the user what you deployed and where.
+- **Goal**: Land changes through commits, pushes/PRs, and deployments when
+  requested, while keeping diffs reviewable in VS Code — a reviewable commit
+  history, not an unexplained batch.
