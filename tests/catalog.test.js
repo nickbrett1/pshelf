@@ -11,6 +11,8 @@ import {
   sortGames,
   formatReleaseDate,
   formatTimeToBeat,
+  isUnreleasedPreorder,
+  preorderReleaseTs,
 } from "../src/lib/catalog.js";
 
 const games = [
@@ -380,6 +382,143 @@ describe("sortGames", () => {
     expect(titles(sortGames(input, "nonsense"))).toEqual(["B", "A"]);
   });
 
+  describe("unreleased pre-orders (default 'purchased' sort)", () => {
+    // 2026-11-18T00:00:00Z — GTA VI's release date, as epoch seconds.
+    const GTA6_RELEASE = 1794960000;
+    const NOW_BEFORE = Date.UTC(2026, 10, 16, 12, 0, 0);
+    const NOW_AFTER = Date.UTC(2026, 10, 20, 12, 0, 0);
+    const bought = (title, purchase_date, extra = {}) =>
+      g(title, { purchased: true, purchase_date, ...extra });
+
+    const input = [
+      bought("Old", Date.UTC(2015, 0, 1)),
+      bought("Recent", Date.UTC(2026, 9, 1)),
+      bought("GTA VI", Date.UTC(2026, 10, 15), {
+        is_preorder: true,
+        preorder_release_ts: GTA6_RELEASE,
+        release_ts: GTA6_RELEASE,
+      }),
+    ];
+
+    it("pins an unreleased pre-order to the top, above newer purchases", () => {
+      expect(titles(sortGames(input, "purchased", NOW_BEFORE))).toEqual([
+        "GTA VI",
+        "Recent",
+        "Old",
+      ]);
+    });
+
+    it("drops it back into purchase-date order once released", () => {
+      // Same row, clock moved past the release date: the purchase date is
+      // unchanged (it is never rewritten), only the ordering changes.
+      expect(titles(sortGames(input, "purchased", NOW_AFTER))).toEqual([
+        "GTA VI",
+        "Recent",
+        "Old",
+      ]);
+      // ...and the pin is gone: with an older purchase date it now sinks.
+      const older = [
+        bought("GTA VI", Date.UTC(2025, 0, 1), {
+          is_preorder: true,
+          preorder_release_ts: GTA6_RELEASE,
+        }),
+        bought("Recent", Date.UTC(2026, 9, 1)),
+      ];
+      expect(titles(sortGames(older, "purchased", NOW_AFTER))).toEqual([
+        "Recent",
+        "GTA VI",
+      ]);
+      expect(titles(sortGames(older, "purchased", NOW_BEFORE))).toEqual([
+        "GTA VI",
+        "Recent",
+      ]);
+    });
+
+    it("orders several pre-orders newest-order-first, then nearest release", () => {
+      const multi = [
+        bought("Late", Date.UTC(2026, 10, 1), {
+          is_preorder: true,
+          preorder_release_ts: GTA6_RELEASE + 90 * 86400,
+        }),
+        bought("Latest", Date.UTC(2026, 10, 15), {
+          is_preorder: true,
+          preorder_release_ts: GTA6_RELEASE,
+        }),
+        bought("Mid", Date.UTC(2026, 10, 10), {
+          is_preorder: true,
+          preorder_release_ts: GTA6_RELEASE + 7 * 86400,
+        }),
+        bought("Released", Date.UTC(2026, 9, 1)),
+      ];
+      expect(titles(sortGames(multi, "purchased", NOW_BEFORE))).toEqual([
+        "Latest",
+        "Mid",
+        "Late",
+        "Released",
+      ]);
+    });
+
+    it("falls back to IGDB's release date when the store date is missing", () => {
+      const onlyIgdb = [
+        bought("Future", Date.UTC(2026, 10, 15), {
+          is_preorder: true,
+          release_ts: GTA6_RELEASE,
+        }),
+        bought("Recent", Date.UTC(2026, 9, 1)),
+      ];
+      expect(titles(sortGames(onlyIgdb, "purchased", NOW_BEFORE))).toEqual([
+        "Future",
+        "Recent",
+      ]);
+    });
+
+    it("never pins a PS+ claimed title, even with a future release date", () => {
+      const claimed = [
+        g("Upcoming", {
+          purchased: false,
+          purchase_date: null,
+          preorder_release_ts: GTA6_RELEASE,
+          release_ts: GTA6_RELEASE,
+        }),
+        bought("Recent", Date.UTC(2026, 9, 1)),
+      ];
+      expect(titles(sortGames(claimed, "purchased", NOW_BEFORE))).toEqual([
+        "Recent",
+        "Upcoming",
+      ]);
+    });
+
+    it("respects an explicit is_preorder = 0 (bought on release day)", () => {
+      const sameDay = [
+        bought("BoughtOnReleaseDay", Date.UTC(2026, 10, 17), {
+          is_preorder: 0,
+          release_ts: GTA6_RELEASE,
+        }),
+        bought("Recent", Date.UTC(2026, 9, 1)),
+      ];
+      expect(titles(sortGames(sameDay, "purchased", NOW_BEFORE))).toEqual([
+        "BoughtOnReleaseDay",
+        "Recent",
+      ]);
+    });
+
+    it("treats a title releasing today as released (day-granular dates)", () => {
+      const today = [
+        bought("Today", Date.UTC(2026, 0, 1), {
+          is_preorder: true,
+          preorder_release_ts: Date.UTC(2026, 10, 16) / 1000,
+        }),
+        bought("Recent", Date.UTC(2026, 9, 1)),
+      ];
+      // NOW_BEFORE is midday on 2026-11-16; the release timestamp is midnight,
+      // so it has already released and must sort by purchase date (oldest → last).
+      expect(titles(sortGames(today, "purchased", NOW_BEFORE))).toEqual([
+        "Recent",
+        "Today",
+      ]);
+    });
+  });
+
   describe("price stored as a currency string (mailroom's real format)", () => {
     const input = [
       g("Mid", { price: "$19.99" }),
@@ -502,5 +641,89 @@ describe("playStateLabel", () => {
   it("labels unknown values as Unplayed", () => {
     expect(playStateLabel(null)).toBe("Unplayed");
     expect(playStateLabel("nonsense")).toBe("Unplayed");
+  });
+});
+
+describe("isUnreleasedPreorder", () => {
+  const GTA6 = 1794960000; // 2026-11-18T00:00:00Z
+  const BEFORE = Date.UTC(2026, 10, 16, 12, 0, 0);
+  const AFTER = Date.UTC(2026, 10, 18, 12, 0, 0);
+  const base = { purchased: true, purchase_date: Date.UTC(2026, 10, 15) };
+
+  it("is true for a purchased title whose release is in the future", () => {
+    expect(
+      isUnreleasedPreorder(
+        { ...base, is_preorder: true, preorder_release_ts: GTA6 },
+        BEFORE,
+      ),
+    ).toBe(true);
+  });
+
+  it("is false once the release date has passed", () => {
+    expect(
+      isUnreleasedPreorder(
+        { ...base, is_preorder: true, preorder_release_ts: GTA6 },
+        AFTER,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false when the game is not purchased (PS+ claim)", () => {
+    expect(
+      isUnreleasedPreorder(
+        { ...base, purchased: false, preorder_release_ts: GTA6 },
+        BEFORE,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false when mailroom explicitly says it is not a pre-order", () => {
+    expect(
+      isUnreleasedPreorder(
+        { ...base, is_preorder: 0, preorder_release_ts: GTA6 },
+        BEFORE,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false when no release date is known at all", () => {
+    expect(isUnreleasedPreorder({ ...base }, BEFORE)).toBe(false);
+    expect(
+      isUnreleasedPreorder(
+        { ...base, is_preorder: true, release_ts: null },
+        BEFORE,
+      ),
+    ).toBe(false);
+  });
+
+  it("degrades gracefully on a pre-pre-order store (columns absent)", () => {
+    // No is_preorder / preorder_release_ts at all — only IGDB's release_ts.
+    expect(isUnreleasedPreorder({ ...base, release_ts: GTA6 }, BEFORE)).toBe(
+      true,
+    );
+  });
+});
+
+describe("preorderReleaseTs", () => {
+  const GTA6 = 1794960000;
+
+  it("prefers the store's expected date over IGDB's", () => {
+    expect(
+      preorderReleaseTs({ preorder_release_ts: GTA6, release_ts: 1234567890 }),
+    ).toBe(GTA6);
+  });
+
+  it("falls back to IGDB's release date", () => {
+    expect(
+      preorderReleaseTs({ preorder_release_ts: null, release_ts: GTA6 }),
+    ).toBe(GTA6);
+  });
+
+  it("returns null when neither is usable", () => {
+    expect(preorderReleaseTs({})).toBeNull();
+    expect(
+      preorderReleaseTs({ preorder_release_ts: 0, release_ts: 0 }),
+    ).toBeNull();
+    expect(preorderReleaseTs(null)).toBeNull();
   });
 });

@@ -208,6 +208,8 @@ describe("mapRow", () => {
       igdb_url: null,
       normalized_title: null,
       play_state: "unplayed",
+      is_preorder: false,
+      preorder_release_ts: null,
     });
   });
 
@@ -249,7 +251,32 @@ describe("mapRow", () => {
       igdb_url: null,
       normalized_title: null,
       play_state: "unplayed",
+      is_preorder: false,
+      preorder_release_ts: null,
     });
+  });
+
+  it("maps pre-order columns onto the UI contract", () => {
+    const mapped = mapRow({
+      game_id: 1200,
+      title: "Grand Theft Auto VI",
+      purchased: 1,
+      is_preorder: 1,
+      preorder_release_ts: 1794960000,
+      release_ts: 1794960000,
+      editions: "[]",
+    });
+    expect(mapped.is_preorder).toBe(true);
+    expect(mapped.preorder_release_ts).toBe(1794960000);
+    expect(mapped.purchased).toBe(true);
+  });
+
+  it("treats missing pre-order columns as 'not a pre-order'", () => {
+    // A store that predates the mailroom change: no is_preorder, no
+    // preorder_release_ts. Must degrade quietly rather than invent one.
+    const mapped = mapRow({ game_id: 7, title: "Old Game", purchased: 1 });
+    expect(mapped.is_preorder).toBe(false);
+    expect(mapped.preorder_release_ts).toBeNull();
   });
 
   // IGDB pages are slug-based; the id alone is not a URL. The read model

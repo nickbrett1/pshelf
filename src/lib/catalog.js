@@ -271,7 +271,9 @@ function byNumber(getter, direction) {
  * Supported `sortBy` values:
  *   title          — A→Z
  *   rating         — highest first
- *   purchased      — most recently acquired first
+ *   purchased      — most recently acquired first, with unreleased
+ *                    pre-orders pinned above everything else (a pre-order
+ *                    sorts by its fixed purchase date once it releases)
  *   released_desc  — newest release date first
  *   released_asc   — oldest release date first
  *   price_asc      — cheapest first
@@ -323,7 +325,54 @@ export function playStateLabel(value) {
   }
 }
 
-export function sortGames(games, sortBy) {
+/**
+ * The release timestamp a pre-order should be judged against.
+ *
+ * The store's expected release date (`preorder_release_ts`) wins when present,
+ * because it is the date the buyer is actually waiting for; IGDB's `release_ts`
+ * is the fallback so the ordering still works on a store that predates the
+ * pre-order columns. Returns null when neither is usable.
+ * @param {Object} game
+ * @returns {number|null} epoch seconds
+ */
+export function preorderReleaseTs(game) {
+  const storeDate = parseNumber(game?.preorder_release_ts);
+  if (storeDate != null && storeDate > 0) return storeDate;
+  const igdbDate = parseNumber(game?.release_ts);
+  return igdbDate != null && igdbDate > 0 ? igdbDate : null;
+}
+
+/**
+ * True when a game is a *paid* pre-order whose release is still in the future.
+ *
+ * Deriving this from dates (rather than trusting mailroom's materialized
+ * `is_preorder` flag) is deliberate: the flag is written at sync/catalog-rebuild
+ * time, and pshelf caches the catalog on the DB file's mtime. A missed sync
+ * would otherwise leave a released game pinned to the top forever. The flag is
+ * still used as an *additional* requirement — a PS+ claimed title with a future
+ * release date is not a pre-order and must not jump the queue.
+ *
+ * `now` is injectable so the tests can assert behaviour on both sides of a
+ * release date without waiting for it.
+ * @param {Object} game mapped catalog row
+ * @param {number} [now] epoch milliseconds
+ * @returns {boolean}
+ */
+export function isUnreleasedPreorder(game, now = Date.now()) {
+  if (!game?.purchased) return false;
+  const releaseTs = preorderReleaseTs(game);
+  if (releaseTs == null) return false;
+  // release_ts is day-granular (midnight UTC), so a title releasing today is
+  // already out — it must sort by its purchase date, not pin to the top.
+  if (releaseTs * 1000 <= now) return false;
+  // If mailroom says explicitly it isn't a pre-order, believe it — this is the
+  // "bought on release day" case where the dates alone look like a pre-order.
+  const flag = game.is_preorder;
+  if (flag === 0 || flag === false) return false;
+  return true;
+}
+
+export function sortGames(games, sortBy, now = Date.now()) {
   const sorted = [...games];
   switch (sortBy) {
     case "title":
@@ -332,12 +381,35 @@ export function sortGames(games, sortBy) {
       );
     case "rating":
       return sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    case "purchased":
-      // Most recent purchase first; games with no date sort last.
-      return sorted.sort(
+    case "purchased": {
+      // Unreleased pre-orders pin to the top: they are the most recent thing
+      // you own, and burying them by purchase date is how a brand-new
+      // pre-order ended up invisible at the bottom of a 1,000-card list.
+      // Among themselves, newest order first, then nearest release date.
+      // Everything else — including a pre-order that has since released —
+      // sorts by its fixed purchase date, newest first, nulls last.
+      const preorders = [];
+      const released = [];
+      for (const g of sorted) {
+        (isUnreleasedPreorder(g, now) ? preorders : released).push(g);
+      }
+      const byPurchaseDesc = (a, b) =>
+        (b.purchase_date ?? -Infinity) - (a.purchase_date ?? -Infinity);
+      preorders.sort(
         (a, b) =>
-          (b.purchase_date ?? -Infinity) - (a.purchase_date ?? -Infinity),
+          byPurchaseDesc(a, b) ||
+          byNumber(preorderReleaseTs, "asc")(a, b) ||
+          (a.title ?? "").localeCompare(b.title ?? ""),
       );
+      return [
+        ...preorders,
+        ...released.sort(
+          (a, b) =>
+            byPurchaseDesc(a, b) ||
+            (a.title ?? "").localeCompare(b.title ?? ""),
+        ),
+      ];
+    }
     case "released_desc":
       return sorted.sort(byNumber((g2) => parseNumber(g2.release_ts), "desc"));
     case "released_asc":

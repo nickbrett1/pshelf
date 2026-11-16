@@ -14,10 +14,12 @@
     formatAcquisitionDate,
     formatReleaseDate,
     formatTimeToBeat,
+    isUnreleasedPreorder,
     keepIfCancelPsPlus,
     normalizePlatform,
     normalizePlayState,
     parseNumber,
+    preorderReleaseTs,
     sortGames,
   } from "$lib/catalog.js";
 
@@ -441,6 +443,9 @@
             <div class="card-body">
               <h3 class="title">
                 {@html highlight(game.title)}
+                {#if isUnreleasedPreorder(game)}
+                  <span class="badge preorder">Pre-order</span>
+                {/if}
                 {#if game.psvr2}
                   <span class="badge psvr2">PSVR2</span>
                 {/if}
@@ -478,7 +483,14 @@
               {#if game.rating}
                 <p class="rating">★ {game.rating.toFixed(1)}</p>
               {/if}
-              {#if expanded.has(game.id) && formatReleaseDate(game.release_ts)}
+              {#if isUnreleasedPreorder(game) && formatReleaseDate(preorderReleaseTs(game))}
+                <!-- Pre-orders show their expected release date collapsed, not
+                     buried behind the expand toggle: the date is the whole
+                     point of the card while you're waiting for it. -->
+                <p class="released preorder-release">
+                  Releases {formatReleaseDate(preorderReleaseTs(game))}
+                </p>
+              {:else if expanded.has(game.id) && formatReleaseDate(game.release_ts)}
                 <p class="released">
                   Released {formatReleaseDate(game.release_ts)}
                 </p>
@@ -867,6 +879,27 @@
     color: #7ee0ff;
     border: 1px solid #1f7a96;
     white-space: nowrap;
+  }
+  /* Pre-order badge — a paid pre-order whose release date is still ahead.
+     Amber so it reads as "not out yet" rather than as a warning. */
+  .title .badge.preorder {
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: #5c4310;
+    color: #ffd479;
+    border: 1px solid #8a6a1d;
+    white-space: nowrap;
+  }
+  /* Expected release date on a pre-order card (shown without expanding). */
+  .released.preorder-release {
+    color: #ffd479;
+    font-weight: 600;
   }
   .meta {
     display: flex;

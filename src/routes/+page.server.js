@@ -65,6 +65,11 @@ function slimGame(g) {
     normalized_title: g.normalized_title,
     play_state: g.play_state,
     purchase_date: maxAcquisitionDate(g),
+    // Pre-order fields (see mapRow): the card shows a "Pre-order" badge and,
+    // when expanded, "Releases <date>"; the default "Purchase Date: Newest"
+    // sort pins unreleased pre-orders to the top.
+    is_preorder: g.is_preorder,
+    preorder_release_ts: g.preorder_release_ts,
   };
 }
 
