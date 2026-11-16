@@ -502,6 +502,25 @@ describe("sortGames", () => {
       ]);
     });
 
+    it("still pins when mailroom's flag is 0 only because it has no purchase date", () => {
+      // GTA VI's real shape on 2026-11-16: ingested from the PSN entitlement
+      // pull with acquisition_date NULL, so mailroom's materialized
+      // is_preorder could only default to 0. A 0 that means "couldn't tell"
+      // must not veto the date-derived pin, or the pre-order is buried again.
+      const noPurchaseDate = [
+        g("Grand Theft Auto VI", {
+          purchased: true,
+          purchase_date: null,
+          is_preorder: 0,
+          release_ts: GTA6_RELEASE,
+        }),
+        bought("Recent", Date.UTC(2026, 9, 1)),
+      ];
+      expect(
+        titles(sortGames(noPurchaseDate, "purchased", NOW_BEFORE)),
+      ).toEqual(["Grand Theft Auto VI", "Recent"]);
+    });
+
     it("treats a title releasing today as released (day-granular dates)", () => {
       const today = [
         bought("Today", Date.UTC(2026, 0, 1), {

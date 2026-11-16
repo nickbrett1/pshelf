@@ -365,10 +365,18 @@ export function isUnreleasedPreorder(game, now = Date.now()) {
   // release_ts is day-granular (midnight UTC), so a title releasing today is
   // already out — it must sort by its purchase date, not pin to the top.
   if (releaseTs * 1000 <= now) return false;
-  // If mailroom says explicitly it isn't a pre-order, believe it — this is the
-  // "bought on release day" case where the dates alone look like a pre-order.
+  // If mailroom says explicitly it IS a pre-order, believe it.
   const flag = game.is_preorder;
-  if (flag === 0 || flag === false) return false;
+  if (flag === 1 || flag === true) return true;
+  // A `0` from mailroom is only a veto when there is a purchase date to judge
+  // by. mailroom materializes is_preorder from `acquisition_date < release`,
+  // so a pre-order whose purchase date failed to land (PSN's entitlement
+  // payload has no purchase timestamp — exactly GTA VI's case) gets a default
+  // 0 that means "couldn't tell", not "not a pre-order". Fall back to the
+  // dates rather than trusting that 0, or the bug this whole change exists to
+  // fix comes straight back.
+  if ((flag === 0 || flag === false) && parseNumber(game.purchase_date) != null)
+    return false;
   return true;
 }
 
