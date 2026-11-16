@@ -726,15 +726,18 @@ describe("isUnreleasedPreorder", () => {
 describe("preorderReleaseTs", () => {
   const GTA6 = 1794960000;
 
-  it("prefers the store's expected date over IGDB's", () => {
+  it("prefers IGDB's release date over the store's hint", () => {
+    // GTA VI: the receipt says 2026-11-18 (a Wednesday), the game actually
+    // ships Thursday 2026-11-19, which is IGDB's date. IGDB is authoritative by
+    // decision, so the store hint must not win.
     expect(
-      preorderReleaseTs({ preorder_release_ts: GTA6, release_ts: 1234567890 }),
+      preorderReleaseTs({ release_ts: GTA6, preorder_release_ts: 1794960000 }),
     ).toBe(GTA6);
   });
 
-  it("falls back to IGDB's release date", () => {
+  it("falls back to the store's hint when IGDB has no release date", () => {
     expect(
-      preorderReleaseTs({ preorder_release_ts: null, release_ts: GTA6 }),
+      preorderReleaseTs({ preorder_release_ts: GTA6, release_ts: null }),
     ).toBe(GTA6);
   });
 

@@ -328,18 +328,23 @@ export function playStateLabel(value) {
 /**
  * The release timestamp a pre-order should be judged against.
  *
- * The store's expected release date (`preorder_release_ts`) wins when present,
- * because it is the date the buyer is actually waiting for; IGDB's `release_ts`
- * is the fallback so the ordering still works on a store that predates the
- * pre-order columns. Returns null when neither is usable.
+ * **IGDB wins deliberately.** Its `release_ts` is the authoritative date; the
+ * store's `preorder_release_ts` is only a hint, used solely when IGDB has no
+ * release date for the title. This was decided on real evidence: the GTA VI
+ * pre-order receipt says 2026-11-18 (a Wednesday) while the game actually
+ * releases Thursday 2026-11-19, which is what IGDB reports. Preferring the
+ * store date would have shown the wrong day on the card.
+ *
+ * Ordering (and therefore the "still unreleased?" test) keys off the same
+ * value, so a stale or wrong store hint can never pin or unpin a title early.
  * @param {Object} game
  * @returns {number|null} epoch seconds
  */
 export function preorderReleaseTs(game) {
-  const storeDate = parseNumber(game?.preorder_release_ts);
-  if (storeDate != null && storeDate > 0) return storeDate;
   const igdbDate = parseNumber(game?.release_ts);
-  return igdbDate != null && igdbDate > 0 ? igdbDate : null;
+  if (igdbDate != null && igdbDate > 0) return igdbDate;
+  const storeDate = parseNumber(game?.preorder_release_ts);
+  return storeDate != null && storeDate > 0 ? storeDate : null;
 }
 
 /**

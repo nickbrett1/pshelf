@@ -115,11 +115,15 @@ export function mapRow(row) {
     // Pre-order support. `is_preorder` is materialized by mailroom at catalog
     // rebuild time (bought before release); `preorder_release_ts` is the
     // STORE's expected release date, kept separate from IGDB's `release_ts`
-    // because they legitimately disagree. Neither is trusted alone: pshelf
-    // derives "still unreleased" from the dates at render time (see
-    // isUnreleasedPreorder) so a stale flag can't pin a released game to the
-    // top of the list forever. Both are absent on a pre-pre-order store and
-    // degrade to "not a pre-order".
+    // because they legitimately disagree — e.g. the GTA VI receipt says
+    // 2026-11-18 while the game ships Thursday 2026-11-19. IGDB is
+    // authoritative for display and ordering; the store value is only a
+    // fallback for titles IGDB has no release date for (see preorderReleaseTs).
+    // `is_preorder` is materialized by mailroom at rebuild time, so pshelf
+    // never trusts it alone: "still unreleased" is derived from the dates at
+    // render time (see isUnreleasedPreorder), or a stale flag could pin a
+    // released game to the top of the list forever. Both columns are absent on
+    // a pre-pre-order store and degrade to "not a pre-order".
     is_preorder: row.is_preorder === 1 || row.is_preorder === true,
     preorder_release_ts: parseNumber(row.preorder_release_ts),
   };
